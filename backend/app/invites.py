@@ -1,9 +1,12 @@
+import logging
 from datetime import datetime, timedelta, timezone
 
 from app.config import settings
 from app.email_client import send_invite_email
 from app.models.user import User
 from app.security import generate_token
+
+logger = logging.getLogger(__name__)
 
 
 async def sync_invites() -> int:
@@ -15,5 +18,9 @@ async def sync_invites() -> int:
             seconds=settings.invite_token_ttl_seconds
         )
         await user.save()
-        send_invite_email(user.email, user.invite_token)
+        try:
+            send_invite_email(user.email, user.invite_token)
+        except Exception:
+            # bad/missing SMTP config shouldn't take the whole app down at startup
+            logger.exception("failed to send invite email to %s", user.email)
     return len(pending)

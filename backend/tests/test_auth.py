@@ -108,6 +108,21 @@ async def test_request_password_reset_emails_known_user(client, monkeypatch):
     assert sent["token"]
 
 
+async def test_request_password_reset_still_returns_ok_when_email_sending_fails(
+    client, monkeypatch
+):
+    # SMTP being down shouldn't turn into a 500, or a way to probe which emails exist
+    user = await _claimed_user()
+
+    def blow_up(to_email: str, token: str) -> None:
+        raise ConnectionRefusedError("smtp not configured")
+
+    monkeypatch.setattr("app.routers.auth.send_password_reset_email", blow_up)
+
+    resp = await client.post("/auth/request-password-reset", json={"email": user.email})
+    assert resp.status_code == 200
+
+
 async def test_request_password_reset_is_quiet_about_unknown_email(client, monkeypatch):
     called = []
     monkeypatch.setattr(

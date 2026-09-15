@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, HTTPException, status
@@ -15,6 +16,7 @@ from app.schemas.auth import (
 from app.security import create_access_token, generate_token, hash_password, verify_password
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+logger = logging.getLogger(__name__)
 
 
 def _is_expired(expires_at: datetime | None) -> bool:
@@ -67,7 +69,11 @@ async def request_password_reset(payload: RequestPasswordResetRequest) -> dict[s
             seconds=settings.reset_token_ttl_seconds
         )
         await user.save()
-        send_password_reset_email(user.email, user.reset_token)
+        try:
+            send_password_reset_email(user.email, user.reset_token)
+        except Exception:
+            # bad SMTP config shouldn't 500 this or hint that the email exists
+            logger.exception("failed to send password reset email to %s", user.email)
     # always the same response, don't leak whether the email exists
     return {"status": "ok"}
 
