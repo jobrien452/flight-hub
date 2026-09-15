@@ -3,12 +3,15 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from app.db import init_db
+from app.invites import sync_invites
 from app.routers import auth, missions
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_db()
+    # picks up anyone preloaded by a migration since the last restart
+    await sync_invites()
     yield
 
 

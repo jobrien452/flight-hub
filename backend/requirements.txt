@@ -4,3 +4,6 @@ beanie==1.29.0
 motor==3.6.0
 pydantic-settings==2.7.1
 python-jose[cryptography]==3.3.0
+bcrypt==5.0.0
+email-validator==2.3.0
+pymongo-migrate==1.0.0

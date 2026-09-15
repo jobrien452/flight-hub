@@ -28,21 +28,21 @@ async def client():
 
 @pytest_asyncio.fixture
 async def admin_user() -> User:
-    user = User(name="Ada Admin", role=Role.ADMIN)
+    user = User(name="Ada Admin", email="ada@flyby-robotics.dev", role=Role.ADMIN)
     await user.insert()
     return user
 
 
 @pytest_asyncio.fixture
 async def pilot_user() -> User:
-    user = User(name="Pete Pilot", role=Role.PILOT)
+    user = User(name="Pete Pilot", email="pete@flyby-robotics.dev", role=Role.PILOT)
     await user.insert()
     return user
 
 
 @pytest_asyncio.fixture
 async def other_pilot_user() -> User:
-    user = User(name="Priya Pilot", role=Role.PILOT)
+    user = User(name="Priya Pilot", email="priya@flyby-robotics.dev", role=Role.PILOT)
     await user.insert()
     return user
 

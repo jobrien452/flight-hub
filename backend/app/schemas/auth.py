@@ -1,10 +1,11 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 
 from app.models.user import Role
 
 
 class LoginRequest(BaseModel):
-    name: str
+    email: EmailStr
+    password: str
 
 
 class LoginResponse(BaseModel):
@@ -12,3 +13,17 @@ class LoginResponse(BaseModel):
     user_id: str
     name: str
     role: Role
+
+
+class AcceptInviteRequest(BaseModel):
+    token: str
+    password: str
+
+
+class RequestPasswordResetRequest(BaseModel):
+    email: EmailStr
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    password: str
