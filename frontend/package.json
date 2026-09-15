@@ -12,6 +12,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@turf/turf": "^7.4.0",
     "deck.gl": "^9.4.0",
     "mapbox-gl": "^3.30.0",
     "react": "^19.2.8",
