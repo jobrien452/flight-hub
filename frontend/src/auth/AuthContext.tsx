@@ -1,14 +1,5 @@
-import { createContext, useContext, useState, type ReactNode } from 'react'
-import type { LoginResponse } from '../types/auth'
-
-type Session = LoginResponse
-
-interface AuthContextValue {
-  session: Session | null
-  setSession: (session: Session | null) => void
-}
-
-const AuthContext = createContext<AuthContextValue | null>(null)
+import { useState, type ReactNode } from 'react'
+import { AuthContext, type Session } from './context'
 
 const STORAGE_KEY = 'flyby.session'
 
@@ -34,10 +25,4 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return <AuthContext.Provider value={{ session, setSession }}>{children}</AuthContext.Provider>
-}
-
-export function useAuth(): AuthContextValue {
-  const ctx = useContext(AuthContext)
-  if (!ctx) throw new Error('useAuth must be used inside AuthProvider')
-  return ctx
 }

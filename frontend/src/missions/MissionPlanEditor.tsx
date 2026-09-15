@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { listUsers } from '../api/users'
-import { useAuth } from '../auth/AuthContext'
+import { useAuth } from '../auth/useAuth'
 import { MapView } from '../map/MapView'
 import { createRectangleSurveyTool, createWaypointTool, type MapTool } from '../tools/MapTool'
 import type { Mission, MissionStatus, PlanParams, Waypoint } from '../types/mission'

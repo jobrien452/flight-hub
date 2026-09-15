@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { getMission, updateMission } from '../api/missions'
-import { useAuth } from '../auth/AuthContext'
+import { useAuth } from '../auth/useAuth'
 import { MapView } from '../map/MapView'
 import { MissionPlanEditor, type MissionPlanEditorValue } from '../missions/MissionPlanEditor'
 import type { Mission } from '../types/mission'
