@@ -39,9 +39,9 @@ export const handlers = [
   http.delete(`${API_URL}/missions/:id`, () => new HttpResponse(null, { status: 204 })),
 
   http.post(`${API_URL}/auth/login`, async ({ request }) => {
-    const body = (await request.json()) as { name: string }
-    if (body.name !== 'Ada Admin') {
-      return new HttpResponse(null, { status: 404 })
+    const body = (await request.json()) as { email: string; password: string }
+    if (body.email !== 'ada@flyby-robotics.dev' || body.password !== 'correct-horse') {
+      return new HttpResponse(null, { status: 401 })
     }
     return HttpResponse.json({
       token: 'fake-token',
@@ -49,5 +49,28 @@ export const handlers = [
       name: 'Ada Admin',
       role: 'admin',
     })
+  }),
+
+  http.post(`${API_URL}/auth/accept-invite`, async ({ request }) => {
+    const body = (await request.json()) as { token: string; password: string }
+    if (body.token !== 'good-invite-token') {
+      return new HttpResponse(null, { status: 404 })
+    }
+    return HttpResponse.json({
+      token: 'fake-token',
+      user_id: 'pilot-1',
+      name: 'Pete Pilot',
+      role: 'pilot',
+    })
+  }),
+
+  http.post(`${API_URL}/auth/request-password-reset`, () => HttpResponse.json({ status: 'ok' })),
+
+  http.post(`${API_URL}/auth/reset-password`, async ({ request }) => {
+    const body = (await request.json()) as { token: string; password: string }
+    if (body.token !== 'good-reset-token') {
+      return new HttpResponse(null, { status: 400 })
+    }
+    return HttpResponse.json({ status: 'ok' })
   }),
 ]
