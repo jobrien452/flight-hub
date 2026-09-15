@@ -2,6 +2,7 @@ import { http, HttpResponse } from 'msw'
 import { API_URL } from '../api/client'
 import type { Mission } from '../types/mission'
 import type { MissionReport } from '../types/missionReport'
+import type { User } from '../types/user'
 
 export const fixtureMission: Mission = {
   id: 'mission-1',
@@ -27,7 +28,18 @@ export const fixtureReport: MissionReport = {
   updated_at: '2026-01-01T00:00:00Z',
 }
 
+export const fixtureUsers: User[] = [
+  { id: 'admin-1', name: 'Ada Admin', email: 'ada@flyby-robotics.dev', role: 'admin', has_password: true },
+  { id: 'pilot-1', name: 'Pete Pilot', email: 'pete@flyby-robotics.dev', role: 'pilot', has_password: true },
+]
+
 export const handlers = [
+  http.get(`${API_URL}/users`, ({ request }) => {
+    const role = new URL(request.url).searchParams.get('role')
+    const users = role ? fixtureUsers.filter((u) => u.role === role) : fixtureUsers
+    return HttpResponse.json(users)
+  }),
+
   http.get(`${API_URL}/missions`, () => HttpResponse.json([fixtureMission])),
 
   http.get(`${API_URL}/missions/:id`, ({ params }) => {
