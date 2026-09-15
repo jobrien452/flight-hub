@@ -4,7 +4,9 @@ import { ProtectedRoute } from './components/ProtectedRoute'
 import { AppLayout } from './layout/AppLayout'
 import { AcceptInvitePage } from './pages/AcceptInvitePage'
 import { LoginPage } from './pages/LoginPage'
+import { MissionDetailPage } from './pages/MissionDetailPage'
 import { MissionsPage } from './pages/MissionsPage'
+import { NewMissionPage } from './pages/NewMissionPage'
 import { RequestPasswordResetPage } from './pages/RequestPasswordResetPage'
 import { ResetPasswordPage } from './pages/ResetPasswordPage'
 
@@ -20,6 +22,8 @@ function App() {
           <Route element={<AppLayout />}>
             <Route path="/" element={<Navigate to="/missions" replace />} />
             <Route path="/missions" element={<MissionsPage />} />
+            <Route path="/missions/new" element={<NewMissionPage />} />
+            <Route path="/missions/:id" element={<MissionDetailPage />} />
           </Route>
         </Route>
       </Routes>
