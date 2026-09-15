@@ -1,0 +1,93 @@
+.plan-editor {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  gap: 12px;
+  height: calc(100svh - 44px - 32px);
+}
+
+@media (max-width: 700px) {
+  .plan-editor {
+    grid-template-columns: 1fr;
+    height: auto;
+  }
+}
+
+.plan-editor-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  overflow-y: auto;
+}
+
+.plan-editor-panel label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.plan-editor-panel input,
+.plan-editor-panel select {
+  font: inherit;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 6px 8px;
+}
+
+.plan-editor-panel fieldset {
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.plan-editor-panel legend {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-dim);
+  padding: 0 4px;
+}
+
+.pilot-row {
+  flex-direction: row !important;
+  align-items: center;
+  gap: 6px !important;
+  color: var(--text) !important;
+  font-size: 13px !important;
+}
+
+.tool-row {
+  display: flex;
+  gap: 6px;
+}
+
+.tool-row button {
+  flex: 1;
+  background: var(--panel-raised);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 6px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.tool-row button.active {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.plan-editor-map {
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+}

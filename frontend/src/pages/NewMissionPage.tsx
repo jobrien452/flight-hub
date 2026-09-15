@@ -1,8 +1,47 @@
+import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { createMission } from '../api/missions'
+import { useAuth } from '../auth/AuthContext'
+import { MissionPlanEditor, type MissionPlanEditorValue } from '../missions/MissionPlanEditor'
+
 export function NewMissionPage() {
+  const { session } = useAuth()
+  const navigate = useNavigate()
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function handleSubmit(value: MissionPlanEditorValue) {
+    if (!session) return
+    setSubmitting(true)
+    setError(null)
+    try {
+      const mission = await createMission(
+        {
+          name: value.name,
+          status: value.status,
+          assigned_pilot_ids: value.assignedPilotIds,
+          waypoints: value.waypoints,
+          plan_params: value.planParams ?? undefined,
+        },
+        session.token,
+      )
+      navigate(`/missions/${mission.id}`, { replace: true })
+    } catch {
+      setError('Could not create the mission')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
   return (
     <div>
       <h1>New Mission</h1>
-      <p className="text-dim">Map and plan builder go here.</p>
+      <MissionPlanEditor
+        submitting={submitting}
+        error={error}
+        submitLabel="Create Mission"
+        onSubmit={handleSubmit}
+      />
     </div>
   )
 }

@@ -1,5 +1,5 @@
 import { generateSurveyPlan } from '../planning/flightPlanGenerators'
-import type { Waypoint } from '../types/mission'
+import type { SurveyPlanParams, Waypoint, WaypointPlanParams } from '../types/mission'
 
 export interface LngLat {
   lng: number
@@ -17,8 +17,15 @@ export interface MapTool {
   renderOverlay: () => Waypoint[]
 }
 
+export interface WaypointToolSettings {
+  altitude: number
+}
+
 // manual point placement, each click appends a waypoint
-export function createWaypointTool(onChange: (waypoints: Waypoint[]) => void): MapTool {
+export function createWaypointTool(
+  settings: WaypointToolSettings,
+  onChange: (waypoints: Waypoint[], planParams: WaypointPlanParams) => void,
+): MapTool {
   let waypoints: Waypoint[] = []
   return {
     id: 'waypoint',
@@ -29,8 +36,8 @@ export function createWaypointTool(onChange: (waypoints: Waypoint[]) => void): M
     },
     onDeactivate: () => {},
     onMapClick: (point) => {
-      waypoints = [...waypoints, { ...point, alt: 0 }]
-      onChange(waypoints)
+      waypoints = [...waypoints, { lat: point.lat, lng: point.lng, alt: settings.altitude }]
+      onChange(waypoints, { type: 'waypoint', waypoints })
     },
     renderOverlay: () => waypoints,
   }
@@ -45,7 +52,7 @@ export interface RectangleSurveySettings {
 // two clicks set opposite corners of a rectangle, then the sweep generator runs
 export function createRectangleSurveyTool(
   settings: RectangleSurveySettings,
-  onChange: (waypoints: Waypoint[]) => void,
+  onChange: (waypoints: Waypoint[], planParams: SurveyPlanParams) => void,
 ): MapTool {
   let corners: LngLat[] = []
   let waypoints: Waypoint[] = []
@@ -70,8 +77,9 @@ export function createRectangleSurveyTool(
         { lat: b.lat, lng: b.lng },
         { lat: b.lat, lng: a.lng },
       ]
-      waypoints = generateSurveyPlan({ type: 'survey', boundary, ...settings })
-      onChange(waypoints)
+      const planParams: SurveyPlanParams = { type: 'survey', boundary, ...settings }
+      waypoints = generateSurveyPlan(planParams)
+      onChange(waypoints, planParams)
     },
     renderOverlay: () => waypoints,
   }
@@ -79,6 +87,6 @@ export function createRectangleSurveyTool(
 
 // default registry the toolbar renders from, add a new tool here to expose it
 export const mapTools: MapTool[] = [
-  createWaypointTool(() => {}),
+  createWaypointTool({ altitude: 50 }, () => {}),
   createRectangleSurveyTool({ altitude: 50, spacing: 20 }, () => {}),
 ]
