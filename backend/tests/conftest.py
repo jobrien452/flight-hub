@@ -59,6 +59,12 @@ def pilot_headers(pilot_user: User) -> dict:
     return {"Authorization": f"Bearer {token}"}
 
 
+@pytest.fixture
+def other_pilot_headers(other_pilot_user: User) -> dict:
+    token = create_access_token(str(other_pilot_user.id), other_pilot_user.role.value)
+    return {"Authorization": f"Bearer {token}"}
+
+
 @pytest_asyncio.fixture
 async def assigned_mission(admin_user: User, pilot_user: User) -> Mission:
     mission = Mission(

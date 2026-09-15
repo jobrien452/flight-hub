@@ -4,7 +4,7 @@ from fastapi import FastAPI
 
 from app.db import init_db
 from app.invites import sync_invites
-from app.routers import auth, missions
+from app.routers import auth, mission_reports, missions
 
 
 @asynccontextmanager
@@ -19,6 +19,7 @@ app = FastAPI(title="Flyby Mission Planner", lifespan=lifespan)
 
 app.include_router(auth.router)
 app.include_router(missions.router)
+app.include_router(mission_reports.router)
 
 
 @app.get("/health")

@@ -1,27 +1,14 @@
 from datetime import datetime, timezone
 
-from beanie import PydanticObjectId
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, status
 
 from app.deps import CurrentUser, get_current_user, require_admin
+from app.mission_access import get_owned_mission
 from app.models.mission import Mission
 from app.models.user import Role
 from app.schemas.mission import MissionCreate, MissionOut, MissionUpdate
 
 router = APIRouter(prefix="/missions", tags=["missions"])
-
-
-async def _get_owned_mission(mission_id: str, current_user: CurrentUser) -> Mission:
-    try:
-        oid = PydanticObjectId(mission_id)
-    except ValueError:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
-    mission = await Mission.get(oid)
-    if mission is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
-    if current_user.role == Role.PILOT and current_user.user_id not in mission.assigned_pilot_ids:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
-    return mission
 
 
 @router.get("", response_model=list[MissionOut])
@@ -39,7 +26,7 @@ async def list_missions(current_user: CurrentUser = Depends(get_current_user)) -
 async def get_mission(
     mission_id: str, current_user: CurrentUser = Depends(get_current_user)
 ) -> MissionOut:
-    mission = await _get_owned_mission(mission_id, current_user)
+    mission = await get_owned_mission(mission_id, current_user)
     return MissionOut(**mission.model_dump(exclude={"id"}), id=str(mission.id))
 
 
@@ -58,7 +45,7 @@ async def update_mission(
     payload: MissionUpdate,
     current_user: CurrentUser = Depends(require_admin),
 ) -> MissionOut:
-    mission = await _get_owned_mission(mission_id, current_user)
+    mission = await get_owned_mission(mission_id, current_user)
     updates = payload.model_dump(exclude_unset=True)
     for field, value in updates.items():
         setattr(mission, field, value)
@@ -71,5 +58,5 @@ async def update_mission(
 async def delete_mission(
     mission_id: str, current_user: CurrentUser = Depends(require_admin)
 ) -> None:
-    mission = await _get_owned_mission(mission_id, current_user)
+    mission = await get_owned_mission(mission_id, current_user)
     await mission.delete()
