@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { getMission, publishMission, updateMission } from '../api/missions'
 import { useAuth } from '../auth/useAuth'
 import { ConfirmDialog } from '../components/ConfirmDialog'
@@ -12,9 +12,11 @@ export function MissionDetailPage() {
   const { id } = useParams()
   const { session } = useAuth()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const [mission, setMission] = useState<Mission | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
-  const [editing, setEditing] = useState(false)
+  // arriving with ?edit=1 means the warning was already given on the missions table
+  const [editing, setEditing] = useState(searchParams.get('edit') === '1')
   const [submitting, setSubmitting] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [confirmingEdit, setConfirmingEdit] = useState(false)

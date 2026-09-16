@@ -43,10 +43,10 @@ beforeEach(() => {
   localStorage.clear()
 })
 
-function renderPage(session: Record<string, string>) {
+function renderPage(session: Record<string, string>, search = '') {
   localStorage.setItem('flyby.session', JSON.stringify(session))
   return render(
-    <MemoryRouter initialEntries={[`/missions/${fixtureMission.id}`]}>
+    <MemoryRouter initialEntries={[`/missions/${fixtureMission.id}${search}`]}>
       <AuthProvider>
         <Routes>
           <Route path="/missions/:id" element={<MissionDetailPage />} />
@@ -130,6 +130,13 @@ describe('MissionDetailPage editing an assigned mission', () => {
 
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     expect(screen.getByText('save')).toBeInTheDocument()
+  })
+
+  it('opens straight into the editor when the warning was already given', async () => {
+    renderPage(adminSession, '?edit=1')
+
+    expect(await screen.findByText('save')).toBeInTheDocument()
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 
   it('saves changes from the editor and returns to view mode', async () => {

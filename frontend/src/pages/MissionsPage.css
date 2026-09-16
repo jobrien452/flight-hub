@@ -47,3 +47,61 @@
   display: flex;
   gap: 8px;
 }
+
+.row-menu {
+  position: relative;
+  display: inline-block;
+}
+
+.row-menu-glyph {
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  padding: 2px 8px;
+  font-size: 16px;
+  line-height: 1.2;
+  color: var(--text-dim);
+  cursor: pointer;
+}
+
+.row-menu-glyph:hover,
+.row-menu-glyph[aria-expanded='true'] {
+  border-color: var(--border);
+  color: var(--text);
+}
+
+.row-menu-items {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  min-width: 120px;
+  padding: 4px;
+  background: var(--panel-raised);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
+.row-menu-items a,
+.row-menu-items button {
+  background: none;
+  border: none;
+  border-radius: 3px;
+  padding: 6px 8px;
+  font-size: 12px;
+  text-align: left;
+  text-decoration: none;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.row-menu-items a:hover,
+.row-menu-items button:hover {
+  background: var(--panel);
+}
+
+.row-menu-danger {
+  color: var(--danger) !important;
+}
