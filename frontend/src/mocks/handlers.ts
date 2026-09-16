@@ -1,5 +1,6 @@
 import { http, HttpResponse } from 'msw'
 import { API_URL } from '../api/client'
+import type { ApiToken } from '../types/apiToken'
 import type { Mission } from '../types/mission'
 import type { MissionReport } from '../types/missionReport'
 import type { User } from '../types/user'
@@ -34,7 +35,42 @@ export const fixtureUsers: User[] = [
   { id: 'pilot-2', name: 'Priya Pilot', email: 'priya@flyby-robotics.dev', role: 'pilot', has_password: true },
 ]
 
+export const fixtureApiToken: ApiToken = {
+  id: 'token-1',
+  name: 'CI pipeline',
+  prefix: 'flyby_abc123',
+  created_at: '2026-01-01T00:00:00Z',
+  last_used_at: null,
+}
+
 export const handlers = [
+  http.get(`${API_URL}/users/me`, () => HttpResponse.json(fixtureUsers[0])),
+
+  http.get(`${API_URL}/api-tokens`, () => HttpResponse.json([fixtureApiToken])),
+
+  http.post(`${API_URL}/api-tokens`, async ({ request }) => {
+    const body = (await request.json()) as { name: string }
+    return HttpResponse.json(
+      {
+        ...fixtureApiToken,
+        id: 'token-2',
+        name: body.name,
+        token: 'flyby_supersecretvalue',
+      },
+      { status: 201 },
+    )
+  }),
+
+  http.delete(`${API_URL}/api-tokens/:id`, () => new HttpResponse(null, { status: 204 })),
+
+  http.get(`${API_URL}/openapi.json`, () =>
+    HttpResponse.json({
+      openapi: '3.1.0',
+      info: { title: 'Flyby Mission Planner', version: '0.1.0' },
+      paths: {},
+    }),
+  ),
+
   http.get(`${API_URL}/users`, ({ request }) => {
     const role = new URL(request.url).searchParams.get('role')
     const users = role ? fixtureUsers.filter((u) => u.role === role) : fixtureUsers

@@ -1,0 +1,60 @@
+.api-docs-hint {
+  font-size: 12px;
+  margin: -8px 0 12px;
+  max-width: 70ch;
+}
+
+/* swagger ships a light theme, this pulls it back towards the rest of the app */
+.api-docs {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 4px 12px;
+}
+
+.api-docs .swagger-ui .info,
+.api-docs .swagger-ui .scheme-container,
+.api-docs .swagger-ui .topbar {
+  display: none;
+}
+
+.api-docs .swagger-ui {
+  font-family: var(--sans);
+}
+
+.api-docs .swagger-ui .opblock-tag,
+.api-docs .swagger-ui .opblock .opblock-summary-path,
+.api-docs .swagger-ui .opblock .opblock-summary-description,
+.api-docs .swagger-ui table thead tr th,
+.api-docs .swagger-ui .parameter__name,
+.api-docs .swagger-ui .parameter__type,
+.api-docs .swagger-ui .response-col_status,
+.api-docs .swagger-ui .model-title,
+.api-docs .swagger-ui label,
+.api-docs .swagger-ui h4,
+.api-docs .swagger-ui h5 {
+  color: var(--text);
+}
+
+.api-docs .swagger-ui .opblock .opblock-section-header {
+  background: var(--panel-raised);
+  box-shadow: none;
+}
+
+.api-docs .swagger-ui .opblock-tag {
+  border-bottom-color: var(--border);
+}
+
+.api-docs .swagger-ui select,
+.api-docs .swagger-ui input[type='text'],
+.api-docs .swagger-ui textarea {
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+}
+
+.api-docs .swagger-ui .model-box,
+.api-docs .swagger-ui section.models {
+  background: var(--panel-raised);
+  border-color: var(--border);
+}

@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { AuthProvider } from './auth/AuthContext'
 import { ProtectedRoute } from './components/ProtectedRoute'
@@ -8,8 +9,15 @@ import { MissionDetailPage } from './pages/MissionDetailPage'
 import { MissionPlanPage } from './pages/MissionPlanPage'
 import { MissionsPage } from './pages/MissionsPage'
 import { NewMissionPage } from './pages/NewMissionPage'
+import { ProfilePage } from './pages/ProfilePage'
 import { RequestPasswordResetPage } from './pages/RequestPasswordResetPage'
 import { ResetPasswordPage } from './pages/ResetPasswordPage'
+
+// swagger-ui is a couple of megabytes and only an admin on one page ever needs
+// it, so it stays out of the main bundle
+const ApiDocsPage = lazy(() =>
+  import('./pages/ApiDocsPage').then((m) => ({ default: m.ApiDocsPage })),
+)
 
 function App() {
   return (
@@ -26,6 +34,15 @@ function App() {
             <Route path="/missions/new" element={<NewMissionPage />} />
             <Route path="/missions/:id" element={<MissionDetailPage />} />
             <Route path="/missions/:id/plan" element={<MissionPlanPage />} />
+            <Route path="/profile" element={<ProfilePage />} />
+            <Route
+              path="/api-docs"
+              element={
+                <Suspense fallback={<p className="text-dim">Loading...</p>}>
+                  <ApiDocsPage />
+                </Suspense>
+              }
+            />
           </Route>
         </Route>
       </Routes>

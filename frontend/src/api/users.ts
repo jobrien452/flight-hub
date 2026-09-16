@@ -6,3 +6,7 @@ export async function listUsers(token: string, role?: Role): Promise<User[]> {
   const query = role ? `?role=${role}` : ''
   return apiFetch<User[]>(`/users${query}`, token)
 }
+
+export async function getMe(token: string): Promise<User> {
+  return apiFetch<User>('/users/me', token)
+}

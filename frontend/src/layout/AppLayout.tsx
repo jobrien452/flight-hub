@@ -13,6 +13,16 @@ export function AppLayout() {
           <NavLink to="/missions" className={({ isActive }) => (isActive ? 'active' : '')}>
             Missions
           </NavLink>
+          {session && (
+            <NavLink to="/profile" className={({ isActive }) => (isActive ? 'active' : '')}>
+              Profile
+            </NavLink>
+          )}
+          {session?.role === 'admin' && (
+            <NavLink to="/api-docs" className={({ isActive }) => (isActive ? 'active' : '')}>
+              API
+            </NavLink>
+          )}
         </nav>
         {session && (
           <div className="user">

@@ -1,3 +1,4 @@
+import hashlib
 import secrets
 from datetime import datetime, timedelta, timezone
 
@@ -7,6 +8,9 @@ from jose import JWTError, jwt
 from app.config import settings
 
 TOKEN_TTL = timedelta(hours=12)
+# marks a bearer credential as an api token rather than a session jwt
+API_TOKEN_PREFIX = "flyby_"
+API_TOKEN_DISPLAY_CHARS = 12
 
 
 def hash_password(password: str) -> str:
@@ -20,6 +24,20 @@ def verify_password(password: str, password_hash: str) -> bool:
 def generate_token() -> str:
     # used for invite and password reset links, not JWTs
     return secrets.token_urlsafe(32)
+
+
+def generate_api_token() -> str:
+    return f"{API_TOKEN_PREFIX}{secrets.token_urlsafe(32)}"
+
+
+def hash_api_token(token: str) -> str:
+    # plain sha256, not bcrypt: these are already high entropy and get hashed on
+    # every request, so a deliberately slow hash would only cost latency
+    return hashlib.sha256(token.encode()).hexdigest()
+
+
+def api_token_prefix(token: str) -> str:
+    return token[:API_TOKEN_DISPLAY_CHARS]
 
 
 def create_access_token(user_id: str, role: str) -> str:
@@ -42,5 +60,9 @@ __all__ = [
     "hash_password",
     "verify_password",
     "generate_token",
+    "generate_api_token",
+    "hash_api_token",
+    "api_token_prefix",
+    "API_TOKEN_PREFIX",
     "JWTError",
 ]
