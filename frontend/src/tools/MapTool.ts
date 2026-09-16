@@ -13,8 +13,11 @@ export interface ToolOverlay {
   ghost?: Waypoint[]
   // whether the markers can be grabbed and dragged
   draggable?: boolean
-  // index into markers, drawn highlighted
+  // index into markers, or into the plan when dragsPlanWaypoints is set
   selected?: number
+  // the plan's own waypoints are the handles. they are drawn at altitude by the
+  // 3d overlay, so hit testing has to go through it rather than a flat map layer
+  dragsPlanWaypoints?: boolean
 }
 
 // common shape for anything on the toolbar, new tools just implement this
@@ -66,18 +69,13 @@ export function createWaypointTool(
 }
 
 export interface SelectToolCallbacks {
-  getWaypoints: () => Waypoint[]
   onSelect: (index: number | null) => void
   onMove: (index: number, point: LngLat) => void
 }
 
 // places nothing of its own, it just targets waypoints that are already down so
 // they can be moved or edited through the infobox
-export function createSelectTool({
-  getWaypoints,
-  onSelect,
-  onMove,
-}: SelectToolCallbacks): MapTool {
+export function createSelectTool({ onSelect, onMove }: SelectToolCallbacks): MapTool {
   let selected: number | null = null
   let dragging = false
 
@@ -109,9 +107,10 @@ export function createSelectTool({
     onHandleDragEnd: () => {
       dragging = false
     },
+    // no flat markers of its own, the waypoints themselves are the handles
     renderOverlay: () => ({
-      markers: getWaypoints(),
-      draggable: true,
+      markers: [],
+      dragsPlanWaypoints: true,
       ...(selected === null ? {} : { selected }),
     }),
   }
@@ -188,5 +187,5 @@ export function createRectangleSurveyTool(
 export const mapTools: MapTool[] = [
   createWaypointTool(() => ({ altitude: 50 }), () => [], () => {}),
   createRectangleSurveyTool(() => ({ altitude: 50, spacing: 20 }), () => {}),
-  createSelectTool({ getWaypoints: () => [], onSelect: () => {}, onMove: () => {} }),
+  createSelectTool({ onSelect: () => {}, onMove: () => {} }),
 ]

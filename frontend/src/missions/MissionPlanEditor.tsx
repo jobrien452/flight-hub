@@ -14,9 +14,6 @@ import './MissionPlanEditor.css'
 
 type ToolId = 'waypoint' | 'rectangle_survey' | 'select'
 
-// the two tools that build a plan, switching between them starts over
-const PLAN_TOOLS: ToolId[] = ['waypoint', 'rectangle_survey']
-
 export interface MissionPlanEditorValue {
   name: string
   assignedPilotIds: string[]
@@ -89,7 +86,6 @@ export function MissionPlanEditor({
         setSurveyGenerated(false)
       }),
       select: createSelectTool({
-        getWaypoints,
         onSelect: setSelectedIndex,
         onMove: (index, point) => {
           setWaypoints((current) =>
@@ -123,17 +119,13 @@ export function MissionPlanEditor({
     activeTool.onHandleDragEnd()
   }
 
+  // switching tools keeps whatever is already planned, so a generated survey can
+  // be topped up by hand. placing a fresh box is what replaces a plan
   function handleToolSelect(id: ToolId) {
-    const startingOver = PLAN_TOOLS.includes(id) && PLAN_TOOLS.includes(activeToolId) && id !== activeToolId
     activeTool.onDeactivate()
     tools[id].onActivate()
     setActiveToolId(id)
     setSelectedIndex(null)
-    if (startingOver) {
-      setWaypoints([])
-      setPlanParams(null)
-      setSurveyGenerated(false)
-    }
     setOverlay(tools[id].renderOverlay())
   }
 

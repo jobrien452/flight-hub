@@ -10,7 +10,13 @@ interface MockLngLat {
 
 interface MockMapProps {
   onClick: (e: MockLngLat) => void
-  onMouseDown: (e: MockLngLat & { features: unknown[]; preventDefault: () => void }) => void
+  onMouseDown: (
+    e: MockLngLat & {
+      features: unknown[]
+      point: { x: number; y: number }
+      preventDefault: () => void
+    },
+  ) => void
   onMouseMove: (e: MockLngLat) => void
   onMouseUp: () => void
   interactiveLayerIds?: string[]
@@ -18,11 +24,32 @@ interface MockMapProps {
   children: ReactNode
 }
 
-// deck.gl needs a real webgl context, so the 3d plan is mocked down to its input
+// deck.gl needs a real webgl context, so the 3d plan is mocked down to its input.
+// the picker stands in for hit testing against dots drawn at altitude
+const pickedIndex = { value: null as number | null }
+
 vi.mock('./FlightOverlay', () => ({
-  FlightOverlay: ({ waypoints }: { waypoints: { alt?: number }[] }) => (
-    <div data-testid="mock-flight-overlay" data-altitudes={waypoints.map((w) => w.alt ?? 0).join(',')} />
-  ),
+  FlightOverlay: ({
+    waypoints,
+    selected,
+    pickable,
+    onPickerReady,
+  }: {
+    waypoints: { alt?: number }[]
+    selected?: number
+    pickable?: boolean
+    onPickerReady?: (pick: ((x: number, y: number) => number | null) | null) => void
+  }) => {
+    onPickerReady?.(() => pickedIndex.value)
+    return (
+      <div
+        data-testid="mock-flight-overlay"
+        data-altitudes={waypoints.map((w) => w.alt ?? 0).join(',')}
+        data-selected={selected ?? ''}
+        data-pickable={String(pickable ?? false)}
+      />
+    )
+  },
 }))
 
 vi.mock('react-map-gl/mapbox', () => ({
@@ -49,6 +76,7 @@ vi.mock('react-map-gl/mapbox', () => ({
           onMouseDown({
             features: [{ properties: { index: 2 } }],
             lngLat: { lng: 10, lat: 20 },
+            point: { x: 50, y: 60 },
             preventDefault: () => {},
           })
         }
@@ -56,7 +84,12 @@ vi.mock('react-map-gl/mapbox', () => ({
       <button
         data-testid="grab-nothing"
         onClick={() =>
-          onMouseDown({ features: [], lngLat: { lng: 10, lat: 20 }, preventDefault: () => {} })
+          onMouseDown({
+            features: [],
+            lngLat: { lng: 10, lat: 20 },
+            point: { x: 50, y: 60 },
+            preventDefault: () => {},
+          })
         }
       />
       <button
@@ -322,6 +355,81 @@ describe('MapView style control', () => {
     render(<MapView waypoints={[]} onMapClick={() => {}} />)
 
     expect(screen.getByRole('button', { name: 'Map' })).toHaveAttribute('aria-pressed', 'true')
+  })
+})
+
+describe('MapView dragging waypoints at altitude', () => {
+  const plan = [
+    { lat: 1, lng: 2, alt: 40 },
+    { lat: 3, lng: 4, alt: 60 },
+  ]
+
+  function renderSelectTool(handlers: Record<string, ReturnType<typeof vi.fn>> = {}) {
+    const props = {
+      onMapClick: vi.fn(),
+      onHandleDragStart: vi.fn(),
+      onHandleDrag: vi.fn(),
+      onHandleDragEnd: vi.fn(),
+      ...handlers,
+    }
+    render(
+      <MapView
+        waypoints={plan}
+        overlay={{ markers: [], dragsPlanWaypoints: true, selected: 1 }}
+        {...props}
+      />,
+    )
+    return props
+  }
+
+  beforeEach(() => {
+    pickedIndex.value = null
+  })
+
+  it('makes the elevated dots pickable for the select tool', () => {
+    renderSelectTool()
+
+    expect(screen.getByTestId('mock-flight-overlay')).toHaveAttribute('data-pickable', 'true')
+  })
+
+  it('leaves the dots unpickable for the other tools', () => {
+    render(<MapView waypoints={plan} onMapClick={() => {}} overlay={{ markers: [] }} />)
+
+    expect(screen.getByTestId('mock-flight-overlay')).toHaveAttribute('data-pickable', 'false')
+  })
+
+  it('passes the selection through so the right dot is highlighted', () => {
+    renderSelectTool()
+
+    expect(screen.getByTestId('mock-flight-overlay')).toHaveAttribute('data-selected', '1')
+  })
+
+  it('grabs the waypoint the 3d overlay reports under the cursor', () => {
+    pickedIndex.value = 1
+    const props = renderSelectTool()
+
+    fireEvent.click(screen.getByTestId('grab-nothing'))
+
+    expect(props.onHandleDragStart).toHaveBeenCalledWith(1)
+  })
+
+  it('ignores a mousedown that hits no waypoint', () => {
+    pickedIndex.value = null
+    const props = renderSelectTool()
+
+    fireEvent.click(screen.getByTestId('grab-corner'))
+
+    // the flat map feature says index 2, but the dots are the handles now
+    expect(props.onHandleDragStart).not.toHaveBeenCalled()
+  })
+
+  it('does not consult the flat map layer for the select tool', () => {
+    pickedIndex.value = 0
+    const props = renderSelectTool()
+
+    fireEvent.click(screen.getByTestId('grab-corner'))
+
+    expect(props.onHandleDragStart).toHaveBeenCalledWith(0)
   })
 })
 

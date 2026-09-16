@@ -59,23 +59,20 @@ describe('waypoint tool', () => {
 })
 
 describe('select tool', () => {
-  const waypoints: Waypoint[] = [
-    { lat: 1, lng: 1, alt: 10 },
-    { lat: 2, lng: 2, alt: 20 },
-  ]
-
-  function selectTool(overrides = {}) {
+  function selectTool() {
     const onSelect = vi.fn()
     const onMove = vi.fn()
-    const tool = createSelectTool({ getWaypoints: () => waypoints, onSelect, onMove, ...overrides })
+    const tool = createSelectTool({ onSelect, onMove })
     return { tool, onSelect, onMove }
   }
 
-  it('offers every waypoint as a draggable handle', () => {
+  it('makes the plan waypoints the handles rather than drawing flat markers', () => {
     const overlay = selectTool().tool.renderOverlay()
 
-    expect(overlay.markers).toEqual(waypoints)
-    expect(overlay.draggable).toBe(true)
+    // flat markers sit on the ground, which would not line up with a waypoint
+    // drawn at altitude, so the 3d overlay owns the hit testing instead
+    expect(overlay.markers).toEqual([])
+    expect(overlay.dragsPlanWaypoints).toBe(true)
   })
 
   it('selects the waypoint that was grabbed', () => {
@@ -129,7 +126,7 @@ describe('select tool', () => {
     tool.onMapClick({ lng: 8, lat: 8 })
 
     expect(onMove).not.toHaveBeenCalled()
-    expect(tool.renderOverlay().markers).toEqual(waypoints)
+    expect(tool.renderOverlay().markers).toEqual([])
   })
 })
 

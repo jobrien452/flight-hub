@@ -13,7 +13,21 @@ import {
 } from './flightGeometry'
 
 const ACCENT: [number, number, number] = [91, 141, 239]
+const SELECTED: [number, number, number] = [255, 255, 255]
 const TETHER: [number, number, number, number] = [91, 141, 239, 140]
+const WAYPOINT_LAYER = 'flight-waypoints-3d'
+// forgiving enough to grab a 5px dot without a steady hand
+const PICK_RADIUS = 10
+
+// returns the index of the waypoint under a screen position, or null
+export type WaypointPicker = (x: number, y: number) => number | null
+
+interface FlightOverlayProps {
+  waypoints: Waypoint[]
+  selected?: number
+  pickable?: boolean
+  onPickerReady?: (pick: WaypointPicker | null) => void
+}
 
 function sameNumbers(a: number[], b: number[]): boolean {
   return a.length === b.length && a.every((value, i) => value === b[i])
@@ -48,7 +62,12 @@ function useGroundElevations(waypoints: Waypoint[]): number[] {
 
 // mapbox line and circle layers are always pinned to the ground, so the flight
 // plan is drawn with deck.gl instead, which takes a real altitude per point
-export function FlightOverlay({ waypoints }: { waypoints: Waypoint[] }) {
+export function FlightOverlay({
+  waypoints,
+  selected,
+  pickable = false,
+  onPickerReady,
+}: FlightOverlayProps) {
   const ground = useGroundElevations(waypoints)
 
   const layers = useMemo(() => {
@@ -72,23 +91,38 @@ export function FlightOverlay({ waypoints }: { waypoints: Waypoint[] }) {
         widthUnits: 'pixels',
       }),
       new ScatterplotLayer<ElevatedPoint>({
-        id: 'flight-waypoints-3d',
+        id: WAYPOINT_LAYER,
         data: toElevatedPoints(waypoints, ground),
         getPosition: (d) => d.position,
-        getFillColor: ACCENT,
-        getRadius: 5,
+        getFillColor: (d) => (d.index === selected ? SELECTED : ACCENT),
+        getRadius: (d) => (d.index === selected ? 8 : 5),
         radiusUnits: 'pixels',
+        pickable,
         // keeps the dot facing the camera instead of lying flat as the map tilts
         billboard: true,
+        updateTriggers: { getFillColor: selected, getRadius: selected },
       }),
     ]
-  }, [waypoints, ground])
+  }, [waypoints, ground, selected, pickable])
 
   const overlay = useControl(() => new MapboxOverlay({ layers: [] })) as MapboxOverlay
 
   useEffect(() => {
     overlay.setProps({ layers })
   }, [overlay, layers])
+
+  // the dots are drawn at altitude, so only deck knows what is under the cursor
+  useEffect(() => {
+    if (!onPickerReady) return
+
+    onPickerReady((x, y) => {
+      const info = overlay.pickObject({ x, y, radius: PICK_RADIUS, layerIds: [WAYPOINT_LAYER] })
+      const index = (info?.object as ElevatedPoint | undefined)?.index
+      return typeof index === 'number' ? index : null
+    })
+
+    return () => onPickerReady(null)
+  }, [overlay, onPickerReady])
 
   return null
 }

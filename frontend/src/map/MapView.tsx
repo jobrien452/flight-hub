@@ -1,9 +1,9 @@
-import { useRef, useState, type ReactNode } from 'react'
+import { useCallback, useRef, useState, type ReactNode } from 'react'
 import Map, { Layer, Popup, ScaleControl, Source } from 'react-map-gl/mapbox'
 import type { MapMouseEvent, MapRef } from 'react-map-gl/mapbox'
 import type { Map as MapboxMap } from 'mapbox-gl'
 import { AddressSearch } from './AddressSearch'
-import { FlightOverlay } from './FlightOverlay'
+import { FlightOverlay, type WaypointPicker } from './FlightOverlay'
 import { MapStyleControl } from './MapStyleControl'
 import { MAP_STYLES, useMapStyle } from './mapStyles'
 import { applyTerrain } from './terrain'
@@ -76,6 +76,10 @@ export function MapView({
   const [hoveringHandle, setHoveringHandle] = useState(false)
   const [dragging, setDragging] = useState(false)
   const [styleId, setStyleId] = useMapStyle()
+  const pickWaypoint = useRef<WaypointPicker | null>(null)
+  const handlePickerReady = useCallback((pick: WaypointPicker | null) => {
+    pickWaypoint.current = pick
+  }, [])
 
 
   if (!MAPBOX_TOKEN) {
@@ -97,7 +101,12 @@ export function MapView({
   }
 
   function handleMouseDown(event: MapMouseEvent) {
-    const index = event.features?.[0]?.properties?.index
+    // the select tool's handles are the waypoints themselves, drawn at altitude
+    // by deck, so ask it what is under the cursor rather than the flat map layer
+    const index = overlay?.dragsPlanWaypoints
+      ? pickWaypoint.current?.(event.point.x, event.point.y)
+      : event.features?.[0]?.properties?.index
+
     if (typeof index !== 'number') return
 
     // keeps the map from panning out from under the handle
@@ -197,7 +206,12 @@ export function MapView({
           </Popup>
         )}
         <ScaleControl position="bottom-left" unit="metric" />
-        <FlightOverlay waypoints={waypoints} />
+        <FlightOverlay
+          waypoints={waypoints}
+          selected={overlay?.dragsPlanWaypoints ? overlay.selected : undefined}
+          pickable={overlay?.dragsPlanWaypoints ?? false}
+          onPickerReady={handlePickerReady}
+        />
       </Map>
       <MapStyleControl value={styleId} onChange={setStyleId} />
     </div>

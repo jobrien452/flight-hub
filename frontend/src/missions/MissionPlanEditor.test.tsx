@@ -163,6 +163,31 @@ describe('MissionPlanEditor', () => {
     expect(await screen.findByText('box placed, click Generate Survey')).toBeInTheDocument()
   })
 
+  it('keeps the generated survey when switching to the waypoint tool', async () => {
+    renderEditor()
+    await placeBox()
+    await userEvent.click(await screen.findByRole('button', { name: 'Generate Survey' }))
+    const generated = await screen.findByText(/^\d+ waypoints$/)
+    const count = generated.textContent
+
+    await userEvent.click(screen.getByRole('button', { name: 'Waypoint' }))
+
+    expect(screen.getByText(/^\d+ waypoints$/).textContent).toBe(count)
+  })
+
+  it('appends to the generated survey rather than starting over', async () => {
+    const onSubmit = renderEditor()
+    await placeBox()
+    await userEvent.click(await screen.findByRole('button', { name: 'Generate Survey' }))
+    const before = Number((await screen.findByText(/^\d+ waypoints$/)).textContent?.split(' ')[0])
+
+    await userEvent.click(screen.getByRole('button', { name: 'Waypoint' }))
+    await userEvent.click(screen.getByText('click A'))
+    await userEvent.click(screen.getByRole('button', { name: 'Create' }))
+
+    expect(onSubmit.mock.calls[0][0].waypoints).toHaveLength(before + 1)
+  })
+
   it('clears the overlay when switching back to the waypoint tool', async () => {
     renderEditor()
     await userEvent.click(screen.getByRole('button', { name: 'Rectangle Survey' }))
