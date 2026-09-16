@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import {
   applyTerrain,
   HILLSHADE_LAYER,
+  HILLSHADE_SOURCE,
   SKY_LAYER,
   TERRAIN_SOURCE,
   type TerrainCapableMap,
@@ -12,7 +13,7 @@ function fakeMap(existing: string[] = []) {
   const addSource = vi.fn((id: string) => {
     present.add(id)
   })
-  const addLayer = vi.fn((layer: { id: string }) => {
+  const addLayer = vi.fn((layer: { id: string; paint: Record<string, unknown> }) => {
     present.add(layer.id)
   })
   const setTerrain = vi.fn()
@@ -40,22 +41,28 @@ describe('applyTerrain', () => {
     expect(setTerrain).toHaveBeenCalledWith({ source: TERRAIN_SOURCE, exaggeration: 1.5 })
   })
 
-  it('shades the hills so the relief is actually visible', () => {
-    const { map, addLayer } = fakeMap()
+  it('gives the hillshade its own dem source, sharing one halves its resolution', () => {
+    const { map, addSource, addLayer } = fakeMap()
 
     applyTerrain(map)
 
+    expect(addSource).toHaveBeenCalledWith(
+      HILLSHADE_SOURCE,
+      expect.objectContaining({ type: 'raster-dem' }),
+    )
     expect(addLayer).toHaveBeenCalledWith(
-      expect.objectContaining({ id: HILLSHADE_LAYER, type: 'hillshade', source: TERRAIN_SOURCE }),
+      expect.objectContaining({ id: HILLSHADE_LAYER, type: 'hillshade', source: HILLSHADE_SOURCE }),
     )
   })
 
-  it('adds a sky so the tilted view has a horizon', () => {
+  it('adds a gradient sky, which needs no sun from the style light', () => {
     const { map, addLayer } = fakeMap()
 
     applyTerrain(map)
 
-    expect(addLayer).toHaveBeenCalledWith(expect.objectContaining({ id: SKY_LAYER, type: 'sky' }))
+    const sky = addLayer.mock.calls.map(([layer]) => layer).find((l) => l.id === SKY_LAYER)
+    expect(sky).toMatchObject({ type: 'sky' })
+    expect(sky?.paint['sky-type']).toBe('gradient')
   })
 
   it('adds nothing twice when it runs again on the same style', () => {
@@ -64,20 +71,20 @@ describe('applyTerrain', () => {
     applyTerrain(map)
     applyTerrain(map)
 
-    expect(addSource).toHaveBeenCalledTimes(1)
+    expect(addSource).toHaveBeenCalledTimes(2)
     expect(addLayer).toHaveBeenCalledTimes(2)
   })
 
   it('rebuilds everything after a style swap has wiped it', () => {
     const { map: first, addSource: firstAdd } = fakeMap()
     applyTerrain(first)
-    expect(firstAdd).toHaveBeenCalledTimes(1)
+    expect(firstAdd).toHaveBeenCalledTimes(2)
 
     // a style swap leaves a map with none of it, which is what style.load hands back
     const { map: swapped, addSource: swappedAdd, addLayer: swappedLayers } = fakeMap()
     applyTerrain(swapped)
 
-    expect(swappedAdd).toHaveBeenCalledTimes(1)
+    expect(swappedAdd).toHaveBeenCalledTimes(2)
     expect(swappedLayers).toHaveBeenCalledTimes(2)
   })
 
