@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { SwaggerUIBundle } from 'swagger-ui-dist'
 import { getOpenApiSpec } from '../api/apiTokens'
+import { API_URL } from '../api/client'
 import { useAuth } from '../auth/useAuth'
 import 'swagger-ui-dist/swagger-ui.css'
 import './ApiDocsPage.css'
@@ -22,7 +23,9 @@ export function ApiDocsPage() {
         if (cancelled) return
         SwaggerUIBundle({
           domNode: container.current,
-          spec,
+          // fastapi's spec names no server, so swagger would resolve paths
+          // against this page and miss the /api prefix nginx proxies on
+          spec: { ...spec, servers: [{ url: API_URL }] },
           deepLinking: true,
           tryItOutEnabled: true,
           docExpansion: 'list',

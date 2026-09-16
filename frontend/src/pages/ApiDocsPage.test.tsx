@@ -44,6 +44,15 @@ describe('ApiDocsPage', () => {
     expect(options.spec).toMatchObject({ info: { title: 'Flyby Mission Planner' } })
   })
 
+  it('points swagger at the api base so calls do not land on the app itself', async () => {
+    renderPage()
+
+    await vi.waitFor(() => expect(swaggerUIBundle).toHaveBeenCalled())
+    const { spec } = swaggerUIBundle.mock.calls[0][0]
+
+    expect(spec.servers).toEqual([{ url: API_URL }])
+  })
+
   it('signs try-it-out requests with the admin token', async () => {
     renderPage()
 
