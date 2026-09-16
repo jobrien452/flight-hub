@@ -1,4 +1,5 @@
-export type MissionStatus = 'draft' | 'planned' | 'complete'
+// draft --publish--> published --every pilot reports in--> completed
+export type MissionStatus = 'draft' | 'published' | 'completed'
 
 export interface Waypoint {
   lat: number
@@ -35,9 +36,9 @@ export interface Mission {
   updated_at: string
 }
 
+// status is left out of both, the server owns it through publish and pilot reports
 export interface MissionCreateInput {
   name: string
-  status?: MissionStatus
   assigned_pilot_ids?: string[]
   waypoints?: Waypoint[]
   plan_params?: PlanParams
@@ -45,7 +46,6 @@ export interface MissionCreateInput {
 
 export interface MissionUpdateInput {
   name?: string
-  status?: MissionStatus
   assigned_pilot_ids?: string[]
   waypoints?: Waypoint[]
   plan_params?: PlanParams

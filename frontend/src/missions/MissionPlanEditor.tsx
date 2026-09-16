@@ -1,22 +1,27 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { listUsers } from '../api/users'
 import { useAuth } from '../auth/useAuth'
 import { MapView } from '../map/MapView'
 import { generateSurveyPlan } from '../planning/flightPlanGenerators'
 import {
   createRectangleSurveyTool,
+  createSelectTool,
   createWaypointTool,
   type LngLat,
   type MapTool,
   type ToolOverlay,
 } from '../tools/MapTool'
-import type { Mission, MissionStatus, PlanParams, Waypoint } from '../types/mission'
+import type { Mission, PlanParams, Waypoint } from '../types/mission'
 import type { User } from '../types/user'
 import './MissionPlanEditor.css'
 
+type ToolId = 'waypoint' | 'rectangle_survey' | 'select'
+
+// the two tools that build a plan, switching between them starts over
+const PLAN_TOOLS: ToolId[] = ['waypoint', 'rectangle_survey']
+
 export interface MissionPlanEditorValue {
   name: string
-  status: MissionStatus
   assignedPilotIds: string[]
   waypoints: Waypoint[]
   planParams: PlanParams | null
@@ -28,6 +33,8 @@ interface MissionPlanEditorProps {
   error: string | null
   submitLabel: string
   onSubmit: (value: MissionPlanEditorValue) => void
+  onPublish?: (value: MissionPlanEditorValue) => void
+  publishing?: boolean
 }
 
 export function MissionPlanEditor({
@@ -36,21 +43,40 @@ export function MissionPlanEditor({
   error,
   submitLabel,
   onSubmit,
+  onPublish,
+  publishing = false,
 }: MissionPlanEditorProps) {
   const { session } = useAuth()
   const [pilots, setPilots] = useState<User[]>([])
   const [name, setName] = useState(mission?.name ?? '')
-  const [status, setStatus] = useState<MissionStatus>(mission?.status ?? 'draft')
   const [assignedPilotIds, setAssignedPilotIds] = useState<string[]>(
     mission?.assigned_pilot_ids ?? [],
   )
   const [waypoints, setWaypoints] = useState<Waypoint[]>(mission?.waypoints ?? [])
   const [planParams, setPlanParams] = useState<PlanParams | null>(mission?.plan_params ?? null)
-  const [activeToolId, setActiveToolId] = useState<'waypoint' | 'rectangle_survey'>('waypoint')
+  const [activeToolId, setActiveToolId] = useState<ToolId>('waypoint')
   const [altitude, setAltitude] = useState(50)
   const [spacing, setSpacing] = useState(20)
   const [surveyGenerated, setSurveyGenerated] = useState(false)
   const [overlay, setOverlay] = useState<ToolOverlay>({ markers: [] })
+  const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
+
+  // tools are built once and read these through the refs, so changing the
+  // altitude doesn't rebuild them and wipe out what's already been placed
+  const settingsRef = useRef({ altitude, spacing })
+  const waypointsRef = useRef(waypoints)
+
+  useEffect(() => {
+    settingsRef.current.altitude = altitude
+    settingsRef.current.spacing = spacing
+  }, [altitude, spacing])
+
+  useEffect(() => {
+    waypointsRef.current = waypoints
+  }, [waypoints])
+
+  const getSettings = useCallback(() => settingsRef.current, [])
+  const getWaypoints = useCallback(() => waypointsRef.current, [])
 
   useEffect(() => {
     // pilots aren't assignable until the mission exists, no point fetching yet
@@ -58,26 +84,38 @@ export function MissionPlanEditor({
     listUsers(session.token, 'pilot').then(setPilots).catch(() => setPilots([]))
   }, [session, mission])
 
-  const tools = useMemo<Record<string, MapTool>>(
+  // the getters below read refs, which reads as render-time ref access, but they
+  // only ever run inside map events, which is the point: the tools are built
+  // once and still see live settings and waypoints
+  /* oxlint-disable react/refs */
+  const tools = useMemo<Record<ToolId, MapTool>>(
     () => ({
-      waypoint: createWaypointTool({ altitude }, (points, params) => {
+      waypoint: createWaypointTool(getSettings, getWaypoints, (points, params) => {
         setWaypoints(points)
         setPlanParams(params)
       }),
-      rectangle_survey: createRectangleSurveyTool({ altitude, spacing }, (points, params) => {
+      rectangle_survey: createRectangleSurveyTool(getSettings, (points, params) => {
         // points here are just the snapped box outline, not a generated sweep yet
         setWaypoints(points)
         setPlanParams(params)
         setSurveyGenerated(false)
       }),
+      select: createSelectTool({
+        getWaypoints,
+        onSelect: setSelectedIndex,
+        onMove: (index, point) => {
+          setWaypoints((current) =>
+            current.map((w, i) => (i === index ? { ...w, lat: point.lat, lng: point.lng } : w)),
+          )
+        },
+      }),
     }),
-    [altitude, spacing],
+    [getSettings, getWaypoints],
   )
+  /* oxlint-enable react/refs */
 
   const activeTool = tools[activeToolId]
 
-  // the tool keeps its own draft state, so pull the overlay after every click
-  // to get the corners on screen as they land
   function handleMapClick(point: LngLat) {
     activeTool.onMapClick(point)
     setOverlay(activeTool.renderOverlay())
@@ -85,6 +123,7 @@ export function MissionPlanEditor({
 
   function handleCornerGrab(index: number) {
     activeTool.onHandleDragStart(index)
+    setOverlay(activeTool.renderOverlay())
   }
 
   function handleCornerMove(point: LngLat) {
@@ -96,15 +135,18 @@ export function MissionPlanEditor({
     activeTool.onHandleDragEnd()
   }
 
-  // switching tools always starts a fresh plan, no partial-append across tools
-  function handleToolSelect(id: 'waypoint' | 'rectangle_survey') {
+  function handleToolSelect(id: ToolId) {
+    const startingOver = PLAN_TOOLS.includes(id) && PLAN_TOOLS.includes(activeToolId) && id !== activeToolId
     activeTool.onDeactivate()
     tools[id].onActivate()
     setActiveToolId(id)
-    setWaypoints([])
-    setPlanParams(null)
-    setSurveyGenerated(false)
-    setOverlay({ markers: [] })
+    setSelectedIndex(null)
+    if (startingOver) {
+      setWaypoints([])
+      setPlanParams(null)
+      setSurveyGenerated(false)
+    }
+    setOverlay(tools[id].renderOverlay())
   }
 
   // the box is just an outline until this runs, uses whatever altitude/spacing
@@ -117,6 +159,17 @@ export function MissionPlanEditor({
     setSurveyGenerated(true)
   }
 
+  function handleWaypointAltitude(alt: number) {
+    if (selectedIndex === null) return
+    setWaypoints((current) => current.map((w, i) => (i === selectedIndex ? { ...w, alt } : w)))
+  }
+
+  function handleWaypointDelete() {
+    if (selectedIndex === null) return
+    setWaypoints((current) => current.filter((_, i) => i !== selectedIndex))
+    setSelectedIndex(null)
+  }
+
   function togglePilot(pilotId: string) {
     setAssignedPilotIds((current) =>
       current.includes(pilotId)
@@ -125,9 +178,16 @@ export function MissionPlanEditor({
     )
   }
 
-  function handleSubmit() {
-    onSubmit({ name, status, assignedPilotIds, waypoints, planParams })
+  function currentValue(): MissionPlanEditorValue {
+    return { name, assignedPilotIds, waypoints, planParams }
   }
+
+  const selectedWaypoint = selectedIndex === null ? undefined : waypoints[selectedIndex]
+  const readyToPublish = name.trim().length > 0 && waypoints.length > 0
+  const canPublish = onPublish && mission && mission.status === 'draft'
+
+  // the select tool draws every waypoint as a handle, so keep it in step as they change
+  const liveOverlay = activeToolId === 'select' ? activeTool.renderOverlay() : overlay
 
   return (
     <div className="plan-editor">
@@ -139,15 +199,6 @@ export function MissionPlanEditor({
             placeholder="New Mission"
             onChange={(e) => setName(e.target.value)}
           />
-        </label>
-
-        <label>
-          Status
-          <select value={status} onChange={(e) => setStatus(e.target.value as MissionStatus)}>
-            <option value="draft">Draft</option>
-            <option value="planned">Planned</option>
-            <option value="complete">Complete</option>
-          </select>
         </label>
 
         {mission && (
@@ -184,15 +235,24 @@ export function MissionPlanEditor({
             >
               Rectangle Survey
             </button>
+            <button
+              type="button"
+              className={activeToolId === 'select' ? 'active' : ''}
+              onClick={() => handleToolSelect('select')}
+            >
+              Select
+            </button>
           </div>
-          <label>
-            Altitude (m)
-            <input
-              type="number"
-              value={altitude}
-              onChange={(e) => setAltitude(Number(e.target.value))}
-            />
-          </label>
+          {activeToolId !== 'select' && (
+            <label>
+              Altitude (m)
+              <input
+                type="number"
+                value={altitude}
+                onChange={(e) => setAltitude(Number(e.target.value))}
+              />
+            </label>
+          )}
           {activeToolId === 'rectangle_survey' && (
             <label>
               Line spacing (m)
@@ -202,6 +262,9 @@ export function MissionPlanEditor({
                 onChange={(e) => setSpacing(Number(e.target.value))}
               />
             </label>
+          )}
+          {activeToolId === 'select' && (
+            <p className="text-dim mono">click a waypoint to edit or drag it</p>
           )}
           {planParams?.type === 'survey' && (
             <button type="button" onClick={handleGenerateSurvey}>
@@ -216,19 +279,56 @@ export function MissionPlanEditor({
         </fieldset>
 
         {error && <p className="auth-error">{error}</p>}
-        <button type="button" className="button" disabled={submitting} onClick={handleSubmit}>
+        <button
+          type="button"
+          className="button"
+          disabled={submitting}
+          onClick={() => onSubmit(currentValue())}
+        >
           {submitting ? 'Saving...' : submitLabel}
         </button>
+        {canPublish && (
+          <button
+            type="button"
+            className="button button-secondary"
+            disabled={!readyToPublish || publishing}
+            onClick={() => onPublish(currentValue())}
+          >
+            {publishing ? 'Publishing...' : 'Publish'}
+          </button>
+        )}
       </aside>
 
       <div className="plan-editor-map">
         <MapView
           waypoints={waypoints}
           onMapClick={handleMapClick}
-          overlay={overlay}
+          overlay={liveOverlay}
           onHandleDragStart={handleCornerGrab}
           onHandleDrag={handleCornerMove}
           onHandleDragEnd={handleCornerRelease}
+          infoboxAt={selectedWaypoint}
+          infobox={
+            selectedWaypoint && (
+              <div className="waypoint-infobox">
+                <strong>Waypoint {(selectedIndex ?? 0) + 1}</strong>
+                <p className="mono">
+                  {selectedWaypoint.lat.toFixed(5)}, {selectedWaypoint.lng.toFixed(5)}
+                </p>
+                <label>
+                  Waypoint altitude (m)
+                  <input
+                    type="number"
+                    value={selectedWaypoint.alt ?? 0}
+                    onChange={(e) => handleWaypointAltitude(Number(e.target.value))}
+                  />
+                </label>
+                <button type="button" onClick={handleWaypointDelete}>
+                  Delete waypoint
+                </button>
+              </div>
+            )
+          }
         />
       </div>
     </div>

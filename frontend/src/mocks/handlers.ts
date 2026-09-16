@@ -62,6 +62,25 @@ export const handlers = [
     return HttpResponse.json({ ...fixtureMission, ...body })
   }),
 
+  http.post(`${API_URL}/missions/:id/publish`, () =>
+    HttpResponse.json({ ...fixtureMission, status: 'published' }),
+  ),
+
+  http.post(`${API_URL}/missions/:id/assignments`, async ({ request }) => {
+    const body = (await request.json()) as { pilot_id: string }
+    return HttpResponse.json({
+      ...fixtureMission,
+      assigned_pilot_ids: [...fixtureMission.assigned_pilot_ids, body.pilot_id],
+    })
+  }),
+
+  http.delete(`${API_URL}/missions/:id/assignments/:pilotId`, ({ params }) =>
+    HttpResponse.json({
+      ...fixtureMission,
+      assigned_pilot_ids: fixtureMission.assigned_pilot_ids.filter((p) => p !== params.pilotId),
+    }),
+  ),
+
   http.delete(`${API_URL}/missions/:id`, () => new HttpResponse(null, { status: 204 })),
 
   http.post(`${API_URL}/auth/login`, async ({ request }) => {

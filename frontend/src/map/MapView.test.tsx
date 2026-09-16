@@ -12,12 +12,20 @@ interface MockMapProps {
   onMouseDown: (e: MockLngLat & { features: unknown[]; preventDefault: () => void }) => void
   onMouseMove: (e: MockLngLat) => void
   onMouseUp: () => void
+  interactiveLayerIds?: string[]
   children: ReactNode
 }
 
 vi.mock('react-map-gl/mapbox', () => ({
-  default: ({ onClick, onMouseDown, onMouseMove, onMouseUp, children }: MockMapProps) => (
-    <div>
+  default: ({
+    onClick,
+    onMouseDown,
+    onMouseMove,
+    onMouseUp,
+    interactiveLayerIds,
+    children,
+  }: MockMapProps) => (
+    <div data-testid="mock-map-root" data-interactive={(interactiveLayerIds ?? []).join(',')}>
       <div data-testid="mock-map" onClick={() => onClick({ lngLat: { lng: 10, lat: 20 } })}>
         {children}
       </div>
@@ -53,11 +61,18 @@ vi.mock('react-map-gl/mapbox', () => ({
     children: ReactNode
     data: GeoJSON.FeatureCollection
   }) => (
-    <div data-testid={`mock-source-${id}`} data-count={data.features.length}>
+    <div
+      data-testid={`mock-source-${id}`}
+      data-count={data.features.length}
+      data-selected={data.features.filter((f) => f.properties?.selected).length}
+    >
       {children}
     </div>
   ),
   Layer: () => null,
+  Popup: ({ children }: { children: ReactNode }) => (
+    <div data-testid="mock-popup">{children}</div>
+  ),
 }))
 
 describe('MapView', () => {
@@ -150,7 +165,9 @@ describe('MapView corner dragging', () => {
       onHandleDragEnd: vi.fn(),
       ...handlers,
     }
-    render(<MapView waypoints={[]} overlay={{ markers: box, ghost: box }} {...props} />)
+    render(
+      <MapView waypoints={[]} overlay={{ markers: box, ghost: box, draggable: true }} {...props} />,
+    )
     return props
   }
 
@@ -207,5 +224,59 @@ describe('MapView corner dragging', () => {
     fireEvent.click(screen.getByTestId('mock-map'))
 
     expect(props.onMapClick).toHaveBeenCalledWith({ lng: 10, lat: 20 })
+  })
+
+  it('only makes markers grabbable when the overlay says they are draggable', () => {
+    render(<MapView waypoints={[]} onMapClick={() => {}} overlay={{ markers: box }} />)
+
+    expect(screen.getByTestId('mock-map-root')).toHaveAttribute('data-interactive', '')
+  })
+
+  it('makes markers grabbable when the overlay is draggable', () => {
+    renderDraggable()
+
+    expect(screen.getByTestId('mock-map-root')).toHaveAttribute(
+      'data-interactive',
+      'overlay-corners',
+    )
+  })
+
+  it('flags the selected marker so it can be drawn differently', () => {
+    render(
+      <MapView
+        waypoints={[]}
+        onMapClick={() => {}}
+        overlay={{ markers: box, draggable: true, selected: 2 }}
+      />,
+    )
+
+    expect(screen.getByTestId('mock-source-tool-overlay')).toHaveAttribute('data-selected', '1')
+  })
+
+  it('flags nothing when no marker is selected', () => {
+    renderDraggable()
+
+    expect(screen.getByTestId('mock-source-tool-overlay')).toHaveAttribute('data-selected', '0')
+  })
+})
+
+describe('MapView infobox', () => {
+  it('renders the infobox anchored at a waypoint', () => {
+    render(
+      <MapView
+        waypoints={[{ lat: 1, lng: 2 }]}
+        onMapClick={() => {}}
+        infoboxAt={{ lat: 1, lng: 2 }}
+        infobox={<p>Waypoint 1</p>}
+      />,
+    )
+
+    expect(screen.getByTestId('mock-popup')).toHaveTextContent('Waypoint 1')
+  })
+
+  it('renders no infobox when nothing is anchored', () => {
+    render(<MapView waypoints={[{ lat: 1, lng: 2 }]} onMapClick={() => {}} />)
+
+    expect(screen.queryByTestId('mock-popup')).not.toBeInTheDocument()
   })
 })

@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest'
-import { createMission, deleteMission, getMission, listMissions, updateMission } from './missions'
+import {
+  assignPilot,
+  createMission,
+  deleteMission,
+  getMission,
+  listMissions,
+  publishMission,
+  unassignPilot,
+  updateMission,
+} from './missions'
 import { fixtureMission } from '../mocks/handlers'
 
 const token = 'fake-token'
@@ -31,13 +40,34 @@ describe('createMission', () => {
 
 describe('updateMission', () => {
   it('patches a mission and returns the updated record', async () => {
-    const mission = await updateMission(fixtureMission.id, { status: 'planned' }, token)
-    expect(mission.status).toBe('planned')
+    const mission = await updateMission(fixtureMission.id, { name: 'Renamed' }, token)
+    expect(mission.name).toBe('Renamed')
   })
 })
 
 describe('deleteMission', () => {
   it('deletes a mission without error', async () => {
     await expect(deleteMission(fixtureMission.id, token)).resolves.toBeUndefined()
+  })
+})
+
+describe('publishMission', () => {
+  it('moves the mission to published', async () => {
+    const mission = await publishMission(fixtureMission.id, token)
+    expect(mission.status).toBe('published')
+  })
+})
+
+describe('assignPilot', () => {
+  it('returns the mission with the pilot added', async () => {
+    const mission = await assignPilot(fixtureMission.id, 'pilot-2', 'Wheels up at 7', token)
+    expect(mission.assigned_pilot_ids).toContain('pilot-2')
+  })
+})
+
+describe('unassignPilot', () => {
+  it('returns the mission with the pilot removed', async () => {
+    const mission = await unassignPilot(fixtureMission.id, 'pilot-1', 'Weather scrubbed it', token)
+    expect(mission.assigned_pilot_ids).not.toContain('pilot-1')
   })
 })

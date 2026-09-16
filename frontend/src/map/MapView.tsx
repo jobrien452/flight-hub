@@ -1,5 +1,5 @@
-import { useRef, useState } from 'react'
-import Map, { Layer, Source } from 'react-map-gl/mapbox'
+import { useRef, useState, type ReactNode } from 'react'
+import Map, { Layer, Popup, Source } from 'react-map-gl/mapbox'
 import type { MapMouseEvent, MapRef } from 'react-map-gl/mapbox'
 import { AddressSearch } from './AddressSearch'
 import type { LngLat, ToolOverlay } from '../tools/MapTool'
@@ -10,6 +10,7 @@ import './MapView.css'
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN as string | undefined
 const ACCENT = '#5b8def'
 const GHOST = '#e0b341'
+const SELECTED = '#f2f5fa'
 
 function toFeatureCollection(waypoints: Waypoint[]): GeoJSON.FeatureCollection {
   const points: GeoJSON.Feature[] = waypoints.map((w) => ({
@@ -40,7 +41,7 @@ function toOverlayCollection(overlay: ToolOverlay): GeoJSON.FeatureCollection {
   const markers: GeoJSON.Feature[] = overlay.markers.map((w, index) => ({
     type: 'Feature',
     // index rides along so a grabbed handle knows which corner it is
-    properties: { index },
+    properties: { index, selected: index === overlay.selected },
     geometry: { type: 'Point', coordinates: [w.lng, w.lat] },
   }))
 
@@ -69,6 +70,9 @@ interface MapViewProps {
   onHandleDragStart?: (index: number) => void
   onHandleDrag?: (point: LngLat) => void
   onHandleDragEnd?: () => void
+  // popup pinned to a waypoint, the caller owns whatever goes inside it
+  infoboxAt?: Waypoint
+  infobox?: ReactNode
 }
 
 export function MapView({
@@ -78,6 +82,8 @@ export function MapView({
   onHandleDragStart,
   onHandleDrag,
   onHandleDragEnd,
+  infoboxAt,
+  infobox,
 }: MapViewProps) {
   const mapRef = useRef<MapRef>(null)
   const draggingRef = useRef(false)
@@ -145,7 +151,7 @@ export function MapView({
         }}
         mapStyle="mapbox://styles/mapbox/dark-v11"
         cursor={dragging ? 'grabbing' : hoveringHandle ? 'grab' : undefined}
-        interactiveLayerIds={overlay?.ghost ? ['overlay-corners'] : undefined}
+        interactiveLayerIds={overlay?.draggable ? ['overlay-corners'] : undefined}
         onClick={handleClick}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
@@ -174,12 +180,24 @@ export function MapView({
               paint={{
                 'circle-color': GHOST,
                 'circle-opacity': 0.25,
-                'circle-radius': 6,
-                'circle-stroke-color': GHOST,
+                'circle-radius': ['case', ['get', 'selected'], 9, 6],
+                'circle-stroke-color': ['case', ['get', 'selected'], SELECTED, GHOST],
                 'circle-stroke-width': 2,
               }}
             />
           </Source>
+        )}
+        {infoboxAt && (
+          <Popup
+            longitude={infoboxAt.lng}
+            latitude={infoboxAt.lat}
+            anchor="bottom"
+            offset={14}
+            closeButton={false}
+            closeOnClick={false}
+          >
+            {infobox}
+          </Popup>
         )}
         <Source id="flight-plan" type="geojson" data={toFeatureCollection(waypoints)}>
           <Layer

@@ -91,3 +91,68 @@
   border-radius: 4px;
   overflow: hidden;
 }
+
+.button-secondary {
+  background: var(--panel-raised);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.button-secondary:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* mapbox paints its popups light by default, pull them back to the panel look */
+.plan-editor-map .mapboxgl-popup-content {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 10px;
+  color: var(--text);
+}
+
+.plan-editor-map .mapboxgl-popup-tip {
+  border-top-color: var(--border);
+}
+
+.waypoint-infobox {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 160px;
+  font-size: 12px;
+}
+
+.waypoint-infobox p {
+  margin: 0;
+  color: var(--text-dim);
+  font-size: 11px;
+}
+
+.waypoint-infobox label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.waypoint-infobox input {
+  font: inherit;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 5px 6px;
+}
+
+.waypoint-infobox button {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 5px;
+  font-size: 11px;
+  color: var(--danger);
+  cursor: pointer;
+}

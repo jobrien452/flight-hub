@@ -11,6 +11,10 @@ export interface LngLat {
 export interface ToolOverlay {
   markers: Waypoint[]
   ghost?: Waypoint[]
+  // whether the markers can be grabbed and dragged
+  draggable?: boolean
+  // index into markers, drawn highlighted
+  selected?: number
 }
 
 // common shape for anything on the toolbar, new tools just implement this
@@ -32,22 +36,24 @@ export interface WaypointToolSettings {
   altitude: number
 }
 
-// manual point placement, each click appends a waypoint
+// manual point placement, each click appends a waypoint carrying whatever
+// altitude is set right now, so changing the altitude only affects new points
 export function createWaypointTool(
-  settings: WaypointToolSettings,
+  getSettings: () => WaypointToolSettings,
+  getWaypoints: () => Waypoint[],
   onChange: (waypoints: Waypoint[], planParams: WaypointPlanParams) => void,
 ): MapTool {
-  let waypoints: Waypoint[] = []
   return {
     id: 'waypoint',
     label: 'Waypoint',
     icon: 'pin',
-    onActivate: () => {
-      waypoints = []
-    },
+    onActivate: () => {},
     onDeactivate: () => {},
     onMapClick: (point) => {
-      waypoints = [...waypoints, { lat: point.lat, lng: point.lng, alt: settings.altitude }]
+      const waypoints = [
+        ...getWaypoints(),
+        { lat: point.lat, lng: point.lng, alt: getSettings().altitude },
+      ]
       onChange(waypoints, { type: 'waypoint', waypoints })
     },
     // nothing to grab, this tool draws no handles
@@ -56,6 +62,58 @@ export function createWaypointTool(
     onHandleDragEnd: () => {},
     // every click lands straight in the plan, so there is no draft to preview
     renderOverlay: () => ({ markers: [] }),
+  }
+}
+
+export interface SelectToolCallbacks {
+  getWaypoints: () => Waypoint[]
+  onSelect: (index: number | null) => void
+  onMove: (index: number, point: LngLat) => void
+}
+
+// places nothing of its own, it just targets waypoints that are already down so
+// they can be moved or edited through the infobox
+export function createSelectTool({
+  getWaypoints,
+  onSelect,
+  onMove,
+}: SelectToolCallbacks): MapTool {
+  let selected: number | null = null
+  let dragging = false
+
+  return {
+    id: 'select',
+    label: 'Select',
+    icon: 'cursor',
+    onActivate: () => {
+      selected = null
+      dragging = false
+    },
+    onDeactivate: () => {
+      selected = null
+    },
+    // a click on open map means "never mind", clicks on a waypoint arrive as a grab
+    onMapClick: () => {
+      selected = null
+      onSelect(null)
+    },
+    onHandleDragStart: (index) => {
+      selected = index
+      dragging = true
+      onSelect(index)
+    },
+    onHandleDrag: (point) => {
+      if (!dragging || selected === null) return
+      onMove(selected, point)
+    },
+    onHandleDragEnd: () => {
+      dragging = false
+    },
+    renderOverlay: () => ({
+      markers: getWaypoints(),
+      draggable: true,
+      ...(selected === null ? {} : { selected }),
+    }),
   }
 }
 
@@ -68,7 +126,7 @@ export interface RectangleSurveySettings {
 // 4 clicks rough out a box, snapped to a clean size, the sweep itself is a
 // separate explicit step (see MissionPlanEditor's "Generate Survey" button)
 export function createRectangleSurveyTool(
-  settings: RectangleSurveySettings,
+  getSettings: () => RectangleSurveySettings,
   onChange: (waypoints: Waypoint[], planParams: SurveyPlanParams) => void,
 ): MapTool {
   let corners: LngLat[] = []
@@ -80,7 +138,7 @@ export function createRectangleSurveyTool(
   function commit(box: Waypoint[]) {
     boundary = box
     corners = box
-    onChange(box, { type: 'survey', boundary: box, ...settings })
+    onChange(box, { type: 'survey', boundary: box, ...getSettings() })
   }
 
   return {
@@ -121,13 +179,14 @@ export function createRectangleSurveyTool(
     // landed versus where you clicked
     renderOverlay: () =>
       boundary.length > 0
-        ? { markers: boundary, ghost: boundary }
+        ? { markers: boundary, ghost: boundary, draggable: true }
         : { markers: corners.map(({ lat, lng }) => ({ lat, lng })) },
   }
 }
 
 // default registry the toolbar renders from, add a new tool here to expose it
 export const mapTools: MapTool[] = [
-  createWaypointTool({ altitude: 50 }, () => {}),
-  createRectangleSurveyTool({ altitude: 50, spacing: 20 }, () => {}),
+  createWaypointTool(() => ({ altitude: 50 }), () => [], () => {}),
+  createRectangleSurveyTool(() => ({ altitude: 50, spacing: 20 }), () => {}),
+  createSelectTool({ getWaypoints: () => [], onSelect: () => {}, onMove: () => {} }),
 ]

@@ -18,7 +18,6 @@ export function NewMissionPage() {
       const mission = await createMission(
         {
           name: value.name,
-          status: value.status,
           assigned_pilot_ids: value.assignedPilotIds,
           waypoints: value.waypoints,
           plan_params: value.planParams ?? undefined,

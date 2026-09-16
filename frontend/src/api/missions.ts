@@ -33,3 +33,32 @@ export async function updateMission(
 export async function deleteMission(id: string, token: string): Promise<void> {
   return apiFetch<void>(`/missions/${id}`, token, { method: 'DELETE' })
 }
+
+export async function publishMission(id: string, token: string): Promise<Mission> {
+  return apiFetch<Mission>(`/missions/${id}/publish`, token, { method: 'POST' })
+}
+
+// the optional message rides along to the pilot's email
+export async function assignPilot(
+  id: string,
+  pilotId: string,
+  message: string | null,
+  token: string,
+): Promise<Mission> {
+  return apiFetch<Mission>(`/missions/${id}/assignments`, token, {
+    method: 'POST',
+    body: JSON.stringify({ pilot_id: pilotId, message }),
+  })
+}
+
+export async function unassignPilot(
+  id: string,
+  pilotId: string,
+  message: string | null,
+  token: string,
+): Promise<Mission> {
+  return apiFetch<Mission>(`/missions/${id}/assignments/${pilotId}`, token, {
+    method: 'DELETE',
+    body: JSON.stringify({ message }),
+  })
+}

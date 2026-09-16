@@ -1,7 +1,7 @@
-import { distance } from '@turf/turf'
+﻿import { distance } from '@turf/turf'
 import { describe, expect, it, vi } from 'vitest'
 import type { Waypoint } from '../types/mission'
-import { createRectangleSurveyTool, mapTools } from './MapTool'
+import { createRectangleSurveyTool, createSelectTool, createWaypointTool, mapTools } from './MapTool'
 
 describe('tool registry', () => {
   it('exposes a waypoint tool', () => {
@@ -10,6 +10,10 @@ describe('tool registry', () => {
 
   it('exposes a rectangle survey tool', () => {
     expect(mapTools.some((t) => t.id === 'rectangle_survey')).toBe(true)
+  })
+
+  it('exposes a select tool', () => {
+    expect(mapTools.some((t) => t.id === 'select')).toBe(true)
   })
 
   it('each tool conforms to the MapTool shape', () => {
@@ -25,9 +29,113 @@ describe('tool registry', () => {
   })
 })
 
+describe('waypoint tool', () => {
+  it('stamps each new waypoint with the altitude set at the time it was placed', () => {
+    const settings = { altitude: 50 }
+    let placed: Waypoint[] = []
+    const tool = createWaypointTool(() => settings, () => placed, (points) => {
+      placed = points
+    })
+
+    tool.onMapClick({ lng: 1, lat: 2 })
+    settings.altitude = 120
+    tool.onMapClick({ lng: 3, lat: 4 })
+
+    expect(placed.map((w) => w.alt)).toEqual([50, 120])
+  })
+
+  it('appends to whatever waypoints already exist rather than its own copy', () => {
+    const existing: Waypoint[] = [{ lat: 9, lng: 9, alt: 33 }]
+    const onChange = vi.fn()
+    const tool = createWaypointTool(() => ({ altitude: 50 }), () => existing, onChange)
+
+    tool.onMapClick({ lng: 1, lat: 2 })
+
+    expect(onChange.mock.calls[0][0]).toEqual([
+      { lat: 9, lng: 9, alt: 33 },
+      { lat: 2, lng: 1, alt: 50 },
+    ])
+  })
+})
+
+describe('select tool', () => {
+  const waypoints: Waypoint[] = [
+    { lat: 1, lng: 1, alt: 10 },
+    { lat: 2, lng: 2, alt: 20 },
+  ]
+
+  function selectTool(overrides = {}) {
+    const onSelect = vi.fn()
+    const onMove = vi.fn()
+    const tool = createSelectTool({ getWaypoints: () => waypoints, onSelect, onMove, ...overrides })
+    return { tool, onSelect, onMove }
+  }
+
+  it('offers every waypoint as a draggable handle', () => {
+    const overlay = selectTool().tool.renderOverlay()
+
+    expect(overlay.markers).toEqual(waypoints)
+    expect(overlay.draggable).toBe(true)
+  })
+
+  it('selects the waypoint that was grabbed', () => {
+    const { tool, onSelect } = selectTool()
+
+    tool.onHandleDragStart(1)
+
+    expect(onSelect).toHaveBeenCalledWith(1)
+    expect(tool.renderOverlay().selected).toBe(1)
+  })
+
+  it('moves the grabbed waypoint as the pointer moves', () => {
+    const { tool, onMove } = selectTool()
+
+    tool.onHandleDragStart(0)
+    tool.onHandleDrag({ lng: 5, lat: 6 })
+
+    expect(onMove).toHaveBeenCalledWith(0, { lng: 5, lat: 6 })
+  })
+
+  it('keeps the waypoint selected after the drag ends', () => {
+    const { tool } = selectTool()
+
+    tool.onHandleDragStart(1)
+    tool.onHandleDragEnd()
+
+    expect(tool.renderOverlay().selected).toBe(1)
+  })
+
+  it('does not move anything when nothing was grabbed', () => {
+    const { tool, onMove } = selectTool()
+
+    tool.onHandleDrag({ lng: 5, lat: 6 })
+
+    expect(onMove).not.toHaveBeenCalled()
+  })
+
+  it('clears the selection when the map itself is clicked', () => {
+    const { tool, onSelect } = selectTool()
+
+    tool.onHandleDragStart(1)
+    tool.onMapClick({ lng: 8, lat: 8 })
+
+    expect(onSelect).toHaveBeenLastCalledWith(null)
+    expect(tool.renderOverlay().selected).toBeUndefined()
+  })
+
+  it('never places a waypoint of its own', () => {
+    const { tool, onMove } = selectTool()
+
+    tool.onMapClick({ lng: 8, lat: 8 })
+
+    expect(onMove).not.toHaveBeenCalled()
+    expect(tool.renderOverlay().markers).toEqual(waypoints)
+  })
+})
+
 describe('rectangle survey overlay', () => {
   function placedTool(clicks: number) {
-    const tool = createRectangleSurveyTool({ altitude: 50, spacing: 20 }, () => {})
+    const tool = createRectangleSurveyTool(() => ({ altitude: 50, spacing: 20 }), () => {})
     const points = [
       { lng: 10, lat: 20 },
       { lng: 10.002, lat: 20 },
@@ -91,7 +199,7 @@ describe('rectangle survey overlay', () => {
 
   it('reports the resized box so the survey has to be regenerated', () => {
     const onChange = vi.fn()
-    const tool = createRectangleSurveyTool({ altitude: 50, spacing: 20 }, onChange)
+    const tool = createRectangleSurveyTool(() => ({ altitude: 50, spacing: 20 }), onChange)
     tool.onActivate()
     ;[
       { lng: 10, lat: 20 },
@@ -128,3 +236,4 @@ describe('rectangle survey overlay', () => {
     expect(tool.renderOverlay().ghost).toBeUndefined()
   })
 })
+
