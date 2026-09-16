@@ -75,6 +75,7 @@ export function MapView({
   // a drag ends with a click event, which would otherwise drop a new corner
   const swallowClickRef = useRef(false)
   const [hoveringHandle, setHoveringHandle] = useState(false)
+  const [hoveringWaypoint, setHoveringWaypoint] = useState(false)
   const [dragging, setDragging] = useState(false)
   const [styleId, setStyleId] = useMapStyle()
   const [infoboxPoint, setInfoboxPoint] = useState<ScreenPoint | null>(null)
@@ -153,8 +154,18 @@ export function MapView({
   }
 
   function handleMouseMove(event: MapMouseEvent) {
-    if (!draggingRef.current) return
-    onHandleDrag?.({ lng: event.lngLat.lng, lat: event.lngLat.lat })
+    if (draggingRef.current) {
+      onHandleDrag?.({ lng: event.lngLat.lng, lat: event.lngLat.lat })
+      return
+    }
+
+    // deck owns hit testing for the select tool, so mapbox never fires enter or
+    // leave for its waypoints and hovering has to be sampled as the pointer moves
+    if (!overlay?.dragsPlanWaypoints) {
+      setHoveringWaypoint(false)
+      return
+    }
+    setHoveringWaypoint(typeof pickWaypoint.current?.(event.point.x, event.point.y) === 'number')
   }
 
   function handleMouseUp() {
@@ -191,7 +202,17 @@ export function MapView({
         }}
         mapStyle={MAP_STYLES[styleId].url}
         onLoad={handleMapLoad}
-        cursor={dragging ? 'grabbing' : hoveringHandle ? 'grab' : undefined}
+        cursor={
+          // a plain pointer over a waypoint reads as "click me", where an open
+          // hand only says "draggable" and is easy to miss
+          dragging
+            ? 'grabbing'
+            : hoveringWaypoint
+              ? 'pointer'
+              : hoveringHandle
+                ? 'grab'
+                : undefined
+        }
         interactiveLayerIds={overlay?.draggable ? ['overlay-corners'] : undefined}
         onClick={handleClick}
         onMouseDown={handleMouseDown}

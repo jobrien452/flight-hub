@@ -17,10 +17,13 @@ interface MockMapProps {
       preventDefault: () => void
     },
   ) => void
-  onMouseMove: (e: MockLngLat) => void
+  onMouseMove: (e: MockLngLat & { point: { x: number; y: number } }) => void
   onMouseUp: () => void
+  onMouseEnter: () => void
+  onMouseLeave: () => void
   interactiveLayerIds?: string[]
   mapStyle: string
+  cursor?: string
   children: ReactNode
 }
 
@@ -58,14 +61,18 @@ vi.mock('react-map-gl/mapbox', () => ({
     onMouseDown,
     onMouseMove,
     onMouseUp,
+    onMouseEnter,
+    onMouseLeave,
     interactiveLayerIds,
     mapStyle,
+    cursor,
     children,
   }: MockMapProps) => (
     <div
       data-testid="mock-map-root"
       data-interactive={(interactiveLayerIds ?? []).join(',')}
       data-style={mapStyle}
+      data-cursor={cursor ?? ''}
     >
       <div data-testid="mock-map" onClick={() => onClick({ lngLat: { lng: 10, lat: 20 } })}>
         {children}
@@ -94,9 +101,11 @@ vi.mock('react-map-gl/mapbox', () => ({
       />
       <button
         data-testid="move-pointer"
-        onClick={() => onMouseMove({ lngLat: { lng: 11, lat: 21 } })}
+        onClick={() => onMouseMove({ lngLat: { lng: 11, lat: 21 }, point: { x: 50, y: 60 } })}
       />
       <button data-testid="release" onClick={() => onMouseUp()} />
+      <button data-testid="enter-layer" onClick={() => onMouseEnter()} />
+      <button data-testid="leave-layer" onClick={() => onMouseLeave()} />
     </div>
   ),
   Source: ({
@@ -254,6 +263,14 @@ describe('MapView corner dragging', () => {
 
     expect(props.onHandleDragEnd).toHaveBeenCalled()
     expect(props.onHandleDrag).not.toHaveBeenCalled()
+  })
+
+  it('keeps the grab cursor for the rectangle corner handles', () => {
+    renderDraggable()
+
+    fireEvent.click(screen.getByTestId('enter-layer'))
+
+    expect(screen.getByTestId('mock-map-root')).toHaveAttribute('data-cursor', 'grab')
   })
 
   it('swallows the click that ends a drag so it does not place a new corner', () => {
@@ -418,6 +435,44 @@ describe('MapView dragging waypoints at altitude', () => {
 
     // the flat map feature says index 2, but the dots are the handles now
     expect(props.onHandleDragStart).not.toHaveBeenCalled()
+  })
+
+  it('shows a click cursor over a waypoint so it reads as selectable', () => {
+    pickedIndex.value = 1
+    renderSelectTool()
+
+    fireEvent.click(screen.getByTestId('move-pointer'))
+
+    expect(screen.getByTestId('mock-map-root')).toHaveAttribute('data-cursor', 'pointer')
+  })
+
+  it('leaves the cursor alone over open map', () => {
+    pickedIndex.value = null
+    renderSelectTool()
+
+    fireEvent.click(screen.getByTestId('move-pointer'))
+
+    expect(screen.getByTestId('mock-map-root')).toHaveAttribute('data-cursor', '')
+  })
+
+  it('goes back to a plain cursor once the pointer leaves the waypoint', () => {
+    pickedIndex.value = 1
+    renderSelectTool()
+    fireEvent.click(screen.getByTestId('move-pointer'))
+
+    pickedIndex.value = null
+    fireEvent.click(screen.getByTestId('move-pointer'))
+
+    expect(screen.getByTestId('mock-map-root')).toHaveAttribute('data-cursor', '')
+  })
+
+  it('shows a grabbing cursor while a waypoint is being dragged', () => {
+    pickedIndex.value = 1
+    renderSelectTool()
+
+    fireEvent.click(screen.getByTestId('grab-nothing'))
+
+    expect(screen.getByTestId('mock-map-root')).toHaveAttribute('data-cursor', 'grabbing')
   })
 
   it('does not consult the flat map layer for the select tool', () => {
