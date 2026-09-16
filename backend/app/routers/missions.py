@@ -54,8 +54,9 @@ def _notify(send, to_email: str, mission: Mission, message: str | None) -> None:
 
 @router.get("", response_model=list[MissionOut])
 async def list_missions(current_user: CurrentUser = Depends(get_current_user)) -> list[MissionOut]:
+    # an admin's missions are their own, a pilot's are whatever they are flying
     if current_user.role == Role.ADMIN:
-        missions = await Mission.find_all().to_list()
+        missions = await Mission.find(Mission.owner_id == current_user.user_id).to_list()
     else:
         missions = await Mission.find(
             Mission.assigned_pilot_ids == current_user.user_id

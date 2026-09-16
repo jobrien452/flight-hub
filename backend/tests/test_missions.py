@@ -7,7 +7,7 @@ async def test_list_missions_requires_auth(client):
     assert resp.status_code == 403  # no bearer token supplied
 
 
-async def test_admin_sees_all_missions(
+async def test_admin_sees_the_missions_they_own(
     client, admin_headers, assigned_mission: Mission, unassigned_mission: Mission
 ):
     resp = await client.get("/missions", headers=admin_headers)

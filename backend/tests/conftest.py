@@ -34,6 +34,13 @@ async def admin_user() -> User:
 
 
 @pytest_asyncio.fixture
+async def other_admin_user() -> User:
+    user = User(name="Alec Admin", email="alec@flyby-robotics.dev", role=Role.ADMIN)
+    await user.insert()
+    return user
+
+
+@pytest_asyncio.fixture
 async def pilot_user() -> User:
     user = User(name="Pete Pilot", email="pete@flyby-robotics.dev", role=Role.PILOT)
     await user.insert()
@@ -50,6 +57,12 @@ async def other_pilot_user() -> User:
 @pytest.fixture
 def admin_headers(admin_user: User) -> dict:
     token = create_access_token(str(admin_user.id), admin_user.role.value)
+    return {"Authorization": f"Bearer {token}"}
+
+
+@pytest.fixture
+def other_admin_headers(other_admin_user: User) -> dict:
+    token = create_access_token(str(other_admin_user.id), other_admin_user.role.value)
     return {"Authorization": f"Bearer {token}"}
 
 
