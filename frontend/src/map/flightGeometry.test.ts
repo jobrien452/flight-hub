@@ -33,6 +33,45 @@ describe('toDropLines', () => {
   })
 })
 
+describe('altitude above ground', () => {
+  it('lifts waypoints by the ground height beneath them', () => {
+    expect(toElevatedPoints(plan, [500, 900])).toEqual([
+      { position: [2, 1, 540], index: 0 },
+      { position: [4, 3, 960], index: 1 },
+    ])
+  })
+
+  it('starts each tether at the ground, not at sea level', () => {
+    expect(toDropLines(plan, [500, 900])).toEqual([
+      { from: [2, 1, 500], to: [2, 1, 540] },
+      { from: [4, 3, 900], to: [4, 3, 960] },
+    ])
+  })
+
+  it('threads the path above the ground it crosses', () => {
+    expect(toFlightPath(plan, [500, 900])).toEqual([
+      [2, 1, 540],
+      [4, 3, 960],
+    ])
+  })
+
+  it('keeps tethers lined up with their own waypoint when some sit on the ground', () => {
+    const mixed: Waypoint[] = [
+      { lat: 1, lng: 2, alt: 0 },
+      { lat: 3, lng: 4, alt: 60 },
+    ]
+
+    expect(toDropLines(mixed, [100, 900])).toEqual([{ from: [4, 3, 900], to: [4, 3, 960] }])
+  })
+
+  it('falls back to sea level when the ground is not known yet', () => {
+    expect(toElevatedPoints(plan, [])).toEqual([
+      { position: [2, 1, 40], index: 0 },
+      { position: [4, 3, 60], index: 1 },
+    ])
+  })
+})
+
 describe('toFlightPath', () => {
   it('threads the path through the waypoint altitudes', () => {
     expect(toFlightPath(plan)).toEqual([

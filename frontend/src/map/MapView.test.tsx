@@ -87,6 +87,9 @@ vi.mock('react-map-gl/mapbox', () => ({
   Popup: ({ children }: { children: ReactNode }) => (
     <div data-testid="mock-popup">{children}</div>
   ),
+  ScaleControl: ({ position }: { position: string }) => (
+    <div data-testid="mock-scale" data-position={position} />
+  ),
 }))
 
 describe('MapView', () => {
@@ -97,6 +100,12 @@ describe('MapView', () => {
     fireEvent.click(screen.getByTestId('mock-map'))
 
     expect(onMapClick).toHaveBeenCalledWith({ lng: 10, lat: 20 })
+  })
+
+  it('puts a scale bar in the bottom left', () => {
+    render(<MapView waypoints={[]} onMapClick={() => {}} />)
+
+    expect(screen.getByTestId('mock-scale')).toHaveAttribute('data-position', 'bottom-left')
   })
 
   it('hands the plan to the 3d overlay with each waypoint altitude', () => {

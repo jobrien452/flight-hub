@@ -1,5 +1,5 @@
 import { useRef, useState, type ReactNode } from 'react'
-import Map, { Layer, Popup, Source } from 'react-map-gl/mapbox'
+import Map, { Layer, Popup, ScaleControl, Source } from 'react-map-gl/mapbox'
 import type { MapMouseEvent, MapRef } from 'react-map-gl/mapbox'
 import type { Map as MapboxMap } from 'mapbox-gl'
 import { AddressSearch } from './AddressSearch'
@@ -13,8 +13,10 @@ import 'mapbox-gl/dist/mapbox-gl.css'
 import './MapView.css'
 
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN as string | undefined
-const GHOST = '#e0b341'
-const SELECTED = '#f2f5fa'
+// the survey box has to stand out over satellite imagery, where a muted amber
+// disappears into dry ground
+const GHOST = '#ff8a3d'
+const SELECTED = '#ffffff'
 // tilted by default, altitude is invisible looking straight down
 const DEFAULT_PITCH = 45
 
@@ -160,13 +162,13 @@ export function MapView({
               id="overlay-fill"
               type="fill"
               filter={['==', ['geometry-type'], 'Polygon']}
-              paint={{ 'fill-color': GHOST, 'fill-opacity': 0.12 }}
+              paint={{ 'fill-color': GHOST, 'fill-opacity': 0.2 }}
             />
             <Layer
               id="overlay-outline"
               type="line"
               filter={['==', ['geometry-type'], 'Polygon']}
-              paint={{ 'line-color': GHOST, 'line-width': 1.5, 'line-dasharray': [3, 2] }}
+              paint={{ 'line-color': GHOST, 'line-width': 2.5, 'line-dasharray': [3, 2] }}
             />
             <Layer
               id="overlay-corners"
@@ -174,10 +176,10 @@ export function MapView({
               filter={['==', ['geometry-type'], 'Point']}
               paint={{
                 'circle-color': GHOST,
-                'circle-opacity': 0.25,
+                'circle-opacity': 0.45,
                 'circle-radius': ['case', ['get', 'selected'], 9, 6],
                 'circle-stroke-color': ['case', ['get', 'selected'], SELECTED, GHOST],
-                'circle-stroke-width': 2,
+                'circle-stroke-width': 2.5,
               }}
             />
           </Source>
@@ -194,6 +196,7 @@ export function MapView({
             {infobox}
           </Popup>
         )}
+        <ScaleControl position="bottom-left" unit="metric" />
         <FlightOverlay waypoints={waypoints} />
       </Map>
       <MapStyleControl value={styleId} onChange={setStyleId} />
