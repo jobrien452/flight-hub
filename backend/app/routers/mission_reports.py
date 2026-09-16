@@ -45,8 +45,9 @@ async def _get_own_report(mission_id: str, report_id: str, current_user: Current
     report = await MissionReport.get(oid)
     if report is None or report.mission_id != mission_id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
+    # another pilot's report reads as missing, same as a mission that is not yours
     if report.pilot_id != current_user.user_id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
     return report
 
 
@@ -75,7 +76,7 @@ async def create_report(
 ) -> MissionReportOut:
     if current_user.role != Role.PILOT:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
-    await get_owned_mission(mission_id, current_user)  # 403 if not assigned, 404 if missing
+    await get_owned_mission(mission_id, current_user)  # 404 unless this pilot is on it
     report = MissionReport(
         mission_id=mission_id, pilot_id=current_user.user_id, **payload.model_dump()
     )

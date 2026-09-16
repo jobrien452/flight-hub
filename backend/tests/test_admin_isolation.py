@@ -30,9 +30,15 @@ async def test_an_admin_with_no_missions_sees_an_empty_list(
 async def test_another_admins_mission_is_not_readable(
     client, other_admin_headers, assigned_mission: Mission
 ):
-    # 404 rather than 403, another admin's work should not even register as existing
     resp = await client.get(f"/missions/{assigned_mission.id}", headers=other_admin_headers)
     assert resp.status_code == 404
+
+
+async def test_a_role_refusal_is_still_a_403(client, pilot_headers):
+    # a mission that is not yours is a 404, but being the wrong role for an
+    # endpoint is a 403. the route exists, the caller just may not use it
+    resp = await client.post("/missions", json={"name": "Nope"}, headers=pilot_headers)
+    assert resp.status_code == 403
 
 
 async def test_another_admins_mission_is_not_editable(

@@ -39,8 +39,9 @@ async def test_get_missing_mission_returns_404(client, admin_headers):
 async def test_pilot_cannot_get_unassigned_mission(
     client, pilot_headers, unassigned_mission: Mission
 ):
+    # not found rather than forbidden, a mission you are not on is none of yours
     resp = await client.get(f"/missions/{unassigned_mission.id}", headers=pilot_headers)
-    assert resp.status_code == 403
+    assert resp.status_code == 404
 
 
 async def test_admin_can_create_mission(client, admin_headers):

@@ -33,7 +33,7 @@ async def test_a_pilot_cannot_acknowledge_someone_elses_mission(
     resp = await client.post(
         f"/missions/{assigned_mission.id}/acknowledge", headers=other_pilot_headers
     )
-    assert resp.status_code == 403
+    assert resp.status_code == 404
 
 
 async def test_an_admin_does_not_acknowledge_missions(

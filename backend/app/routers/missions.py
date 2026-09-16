@@ -124,7 +124,7 @@ async def _pilot_advance(
     if current_user.role != Role.PILOT:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="pilots only")
 
-    mission = await get_owned_mission(mission_id, current_user)  # 403 unless assigned
+    mission = await get_owned_mission(mission_id, current_user)  # 404 unless assigned
     if mission.status not in allowed_from:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,

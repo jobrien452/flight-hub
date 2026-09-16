@@ -22,7 +22,7 @@ async def test_pilot_cannot_create_report_for_unassigned_mission(
     resp = await client.post(
         f"/missions/{unassigned_mission.id}/reports", json={}, headers=pilot_headers
     )
-    assert resp.status_code == 403
+    assert resp.status_code == 404
 
 
 async def test_pilot_reads_own_report(client, pilot_headers, assigned_mission: Mission):
@@ -106,7 +106,7 @@ async def test_pilot_cannot_update_another_pilots_report(
         json={"notes": "sneaky edit"},
         headers=other_pilot_headers,
     )
-    assert resp.status_code == 403
+    assert resp.status_code == 404
 
 
 async def test_no_delete_route_exists(client, pilot_headers, assigned_mission: Mission):
