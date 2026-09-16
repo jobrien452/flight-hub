@@ -1,4 +1,4 @@
-import { generateSurveyPlan } from '../planning/flightPlanGenerators'
+import { snapToRectangle } from './snapRectangle'
 import type { SurveyPlanParams, Waypoint, WaypointPlanParams } from '../types/mission'
 
 export interface LngLat {
@@ -49,13 +49,14 @@ export interface RectangleSurveySettings {
   heading?: number
 }
 
-// two clicks set opposite corners of a rectangle, then the sweep generator runs
+// 4 clicks rough out a box, snapped to a clean size, the sweep itself is a
+// separate explicit step (see MissionPlanEditor's "Generate Survey" button)
 export function createRectangleSurveyTool(
   settings: RectangleSurveySettings,
   onChange: (waypoints: Waypoint[], planParams: SurveyPlanParams) => void,
 ): MapTool {
   let corners: LngLat[] = []
-  let waypoints: Waypoint[] = []
+  let boundary: Waypoint[] = []
 
   return {
     id: 'rectangle_survey',
@@ -63,25 +64,18 @@ export function createRectangleSurveyTool(
     icon: 'square',
     onActivate: () => {
       corners = []
-      waypoints = []
+      boundary = []
     },
     onDeactivate: () => {},
     onMapClick: (point) => {
-      corners = corners.length >= 2 ? [point] : [...corners, point]
-      if (corners.length !== 2) return
+      corners = corners.length >= 4 ? [point] : [...corners, point]
+      if (corners.length !== 4) return
 
-      const [a, b] = corners
-      const boundary: Waypoint[] = [
-        { lat: a.lat, lng: a.lng },
-        { lat: a.lat, lng: b.lng },
-        { lat: b.lat, lng: b.lng },
-        { lat: b.lat, lng: a.lng },
-      ]
+      boundary = snapToRectangle(corners)
       const planParams: SurveyPlanParams = { type: 'survey', boundary, ...settings }
-      waypoints = generateSurveyPlan(planParams)
-      onChange(waypoints, planParams)
+      onChange(boundary, planParams)
     },
-    renderOverlay: () => waypoints,
+    renderOverlay: () => boundary,
   }
 }
 

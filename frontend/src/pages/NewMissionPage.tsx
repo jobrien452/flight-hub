@@ -35,7 +35,7 @@ export function NewMissionPage() {
 
   return (
     <div>
-      <h1>New Mission</h1>
+      <h1>Mission planning</h1>
       <MissionPlanEditor
         submitting={submitting}
         error={error}

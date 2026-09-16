@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { listUsers } from '../api/users'
 import { useAuth } from '../auth/useAuth'
 import { MapView } from '../map/MapView'
+import { generateSurveyPlan } from '../planning/flightPlanGenerators'
 import { createRectangleSurveyTool, createWaypointTool, type MapTool } from '../tools/MapTool'
 import type { Mission, MissionStatus, PlanParams, Waypoint } from '../types/mission'
 import type { User } from '../types/user'
@@ -42,11 +43,13 @@ export function MissionPlanEditor({
   const [activeToolId, setActiveToolId] = useState<'waypoint' | 'rectangle_survey'>('waypoint')
   const [altitude, setAltitude] = useState(50)
   const [spacing, setSpacing] = useState(20)
+  const [surveyGenerated, setSurveyGenerated] = useState(false)
 
   useEffect(() => {
-    if (!session) return
+    // pilots aren't assignable until the mission exists, no point fetching yet
+    if (!session || !mission) return
     listUsers(session.token, 'pilot').then(setPilots).catch(() => setPilots([]))
-  }, [session])
+  }, [session, mission])
 
   const tools = useMemo<Record<string, MapTool>>(
     () => ({
@@ -55,8 +58,10 @@ export function MissionPlanEditor({
         setPlanParams(params)
       }),
       rectangle_survey: createRectangleSurveyTool({ altitude, spacing }, (points, params) => {
+        // points here are just the snapped box outline, not a generated sweep yet
         setWaypoints(points)
         setPlanParams(params)
+        setSurveyGenerated(false)
       }),
     }),
     [altitude, spacing],
@@ -71,6 +76,17 @@ export function MissionPlanEditor({
     setActiveToolId(id)
     setWaypoints([])
     setPlanParams(null)
+    setSurveyGenerated(false)
+  }
+
+  // the box is just an outline until this runs, uses whatever altitude/spacing
+  // are set right now so tweaking settings and regenerating works
+  function handleGenerateSurvey() {
+    if (planParams?.type !== 'survey') return
+    const params = { ...planParams, altitude, spacing }
+    setWaypoints(generateSurveyPlan(params))
+    setPlanParams(params)
+    setSurveyGenerated(true)
   }
 
   function togglePilot(pilotId: string) {
@@ -90,7 +106,11 @@ export function MissionPlanEditor({
       <aside className="plan-editor-panel">
         <label>
           Name
-          <input value={name} onChange={(e) => setName(e.target.value)} />
+          <input
+            value={name}
+            placeholder="New Mission"
+            onChange={(e) => setName(e.target.value)}
+          />
         </label>
 
         <label>
@@ -102,20 +122,22 @@ export function MissionPlanEditor({
           </select>
         </label>
 
-        <fieldset>
-          <legend>Pilots</legend>
-          {pilots.map((pilot) => (
-            <label key={pilot.id} className="pilot-row">
-              <input
-                type="checkbox"
-                checked={assignedPilotIds.includes(pilot.id)}
-                onChange={() => togglePilot(pilot.id)}
-              />
-              {pilot.name}
-            </label>
-          ))}
-          {pilots.length === 0 && <p className="text-dim">No pilots yet.</p>}
-        </fieldset>
+        {mission && (
+          <fieldset>
+            <legend>Pilots</legend>
+            {pilots.map((pilot) => (
+              <label key={pilot.id} className="pilot-row">
+                <input
+                  type="checkbox"
+                  checked={assignedPilotIds.includes(pilot.id)}
+                  onChange={() => togglePilot(pilot.id)}
+                />
+                {pilot.name}
+              </label>
+            ))}
+            {pilots.length === 0 && <p className="text-dim">No pilots yet.</p>}
+          </fieldset>
+        )}
 
         <fieldset>
           <legend>Tool</legend>
@@ -153,7 +175,16 @@ export function MissionPlanEditor({
               />
             </label>
           )}
-          <p className="text-dim mono">{waypoints.length} waypoints</p>
+          {planParams?.type === 'survey' && (
+            <button type="button" onClick={handleGenerateSurvey}>
+              Generate Survey
+            </button>
+          )}
+          {planParams?.type === 'survey' && !surveyGenerated ? (
+            <p className="text-dim mono">box placed, click Generate Survey</p>
+          ) : (
+            <p className="text-dim mono">{waypoints.length} waypoints</p>
+          )}
         </fieldset>
 
         {error && <p className="auth-error">{error}</p>}
