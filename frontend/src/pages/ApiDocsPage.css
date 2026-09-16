@@ -53,10 +53,28 @@
   border: 1px solid var(--border);
 }
 
+/* swagger tints every schema block, and model-box is an inline-block, so the
+   tint reads as a grey highlight sitting behind the text. let schemas lie flat
+   on the panel and keep the tinting to the outer container only */
 .api-docs .swagger-ui .model-box,
+.api-docs .swagger-ui .model-box .json-schema-2020-12,
+.api-docs .swagger-ui .json-schema-2020-12,
+.api-docs .swagger-ui .json-schema-2020-12 button,
+.api-docs .swagger-ui .json-schema-2020-12-accordion,
+.api-docs .swagger-ui .json-schema-2020-12-expand-deep-button,
+.api-docs .swagger-ui section.models .model-container,
+.api-docs .swagger-ui section.models .model-container:hover,
+.api-docs .swagger-ui section.models h4:hover {
+  background: transparent;
+}
+
 .api-docs .swagger-ui section.models {
   background: var(--panel-raised);
   border-color: var(--border);
+}
+
+.api-docs .swagger-ui section.models .model-container {
+  border: 1px solid var(--border);
 }
 
 /* swagger renders request and response examples as near-black text on a dark
@@ -66,10 +84,15 @@
 .api-docs .swagger-ui .highlight-code > .microlight code,
 .api-docs .swagger-ui .renderedMarkdown code,
 .api-docs .swagger-ui .body-param__example,
-.api-docs .swagger-ui .curl,
-.api-docs .swagger-ui .response-col_description__inner div.renderedMarkdown p {
+.api-docs .swagger-ui .curl {
   color: var(--text) !important;
   background: var(--bg) !important;
+}
+
+/* prose, not code, so it takes the colour without a slab behind it */
+.api-docs .swagger-ui .response-col_description__inner div.renderedMarkdown p {
+  color: var(--text) !important;
+  background: transparent !important;
 }
 
 /* the syntax highlighter colours each token inline, so they need overriding too */
