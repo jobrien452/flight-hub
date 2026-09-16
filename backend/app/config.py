@@ -23,6 +23,15 @@ class Settings(BaseSettings):
     smtp_from_email: str = "no-reply@example.com"
     smtp_use_tls: bool = True
 
+    # comma separated, only needed when the frontend calls this api cross-origin
+    # (e.g. local dev, vite on :5173 hitting this on :8000). Not needed when nginx
+    # reverse-proxies /api to this service, that's already same-origin.
+    cors_origins: str = "http://localhost:5173"
+
+    @property
+    def cors_origin_list(self) -> list[str]:
+        return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
+
     class Config:
         env_file = ".env"
 

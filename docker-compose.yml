@@ -29,7 +29,9 @@ services:
     build:
       context: ./frontend
       args:
-        VITE_API_URL: http://localhost:8000
+        # relative + same-origin, nginx proxies /api to the backend container.
+        # real visitors never see localhost:8000, which would be their own machine
+        VITE_API_URL: /api
         VITE_MAPBOX_TOKEN: ${VITE_MAPBOX_TOKEN}
     ports:
       - "80:80"

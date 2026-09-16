@@ -6,6 +6,10 @@ set -euo pipefail
 # DNS must already point at this machine's public IP, since Let's Encrypt has to
 # reach it over the internet on port 80 to verify it.
 
+# on Windows Git Bash, paths like /var/www/certbot get silently rewritten to a
+# Windows path before reaching docker, this stops that (harmless on real Linux)
+export MSYS_NO_PATHCONV=1
+
 source .env
 
 if [ -z "${DOMAIN:-}" ] || [ -z "${CERTBOT_EMAIL:-}" ]; then
