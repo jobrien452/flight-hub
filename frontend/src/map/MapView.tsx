@@ -2,39 +2,19 @@ import { useRef, useState, type ReactNode } from 'react'
 import Map, { Layer, Popup, Source } from 'react-map-gl/mapbox'
 import type { MapMouseEvent, MapRef } from 'react-map-gl/mapbox'
 import { AddressSearch } from './AddressSearch'
+import { FlightOverlay } from './FlightOverlay'
+import { MapStyleControl } from './MapStyleControl'
+import { MAP_STYLES, useMapStyle } from './mapStyles'
 import type { LngLat, ToolOverlay } from '../tools/MapTool'
 import type { Waypoint } from '../types/mission'
 import 'mapbox-gl/dist/mapbox-gl.css'
 import './MapView.css'
 
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN as string | undefined
-const ACCENT = '#5b8def'
 const GHOST = '#e0b341'
 const SELECTED = '#f2f5fa'
-
-function toFeatureCollection(waypoints: Waypoint[]): GeoJSON.FeatureCollection {
-  const points: GeoJSON.Feature[] = waypoints.map((w) => ({
-    type: 'Feature',
-    properties: {},
-    geometry: { type: 'Point', coordinates: [w.lng, w.lat] },
-  }))
-
-  const line: GeoJSON.Feature[] =
-    waypoints.length >= 2
-      ? [
-          {
-            type: 'Feature',
-            properties: {},
-            geometry: {
-              type: 'LineString',
-              coordinates: waypoints.map((w) => [w.lng, w.lat]),
-            },
-          },
-        ]
-      : []
-
-  return { type: 'FeatureCollection', features: [...points, ...line] }
-}
+// tilted by default, altitude is invisible looking straight down
+const DEFAULT_PITCH = 45
 
 // corners the user has dropped so far, plus the closed box once it snaps
 function toOverlayCollection(overlay: ToolOverlay): GeoJSON.FeatureCollection {
@@ -91,6 +71,7 @@ export function MapView({
   const swallowClickRef = useRef(false)
   const [hoveringHandle, setHoveringHandle] = useState(false)
   const [dragging, setDragging] = useState(false)
+  const [styleId, setStyleId] = useMapStyle()
 
   if (!MAPBOX_TOKEN) {
     return (
@@ -148,8 +129,10 @@ export function MapView({
           longitude: first?.lng ?? -122.4194,
           latitude: first?.lat ?? 37.7749,
           zoom: first ? 15 : 10,
+          pitch: DEFAULT_PITCH,
         }}
-        mapStyle="mapbox://styles/mapbox/dark-v11"
+        mapStyle={MAP_STYLES[styleId].url}
+        terrain={{ source: 'terrain-dem', exaggeration: 1 }}
         cursor={dragging ? 'grabbing' : hoveringHandle ? 'grab' : undefined}
         interactiveLayerIds={overlay?.draggable ? ['overlay-corners'] : undefined}
         onClick={handleClick}
@@ -199,21 +182,17 @@ export function MapView({
             {infobox}
           </Popup>
         )}
-        <Source id="flight-plan" type="geojson" data={toFeatureCollection(waypoints)}>
-          <Layer
-            id="flight-path"
-            type="line"
-            filter={['==', ['geometry-type'], 'LineString']}
-            paint={{ 'line-color': ACCENT, 'line-width': 2 }}
-          />
-          <Layer
-            id="flight-waypoints"
-            type="circle"
-            filter={['==', ['geometry-type'], 'Point']}
-            paint={{ 'circle-color': ACCENT, 'circle-radius': 5 }}
-          />
-        </Source>
+        {/* real hills under the plan, and what the elevated waypoints sit above */}
+        <Source
+          id="terrain-dem"
+          type="raster-dem"
+          url="mapbox://mapbox.mapbox-terrain-dem-v1"
+          tileSize={512}
+          maxzoom={14}
+        />
+        <FlightOverlay waypoints={waypoints} />
       </Map>
+      <MapStyleControl value={styleId} onChange={setStyleId} />
     </div>
   )
 }

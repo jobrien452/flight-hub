@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import type { ReactNode } from 'react'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { MapView } from './MapView'
 
 interface MockLngLat {
@@ -13,8 +14,16 @@ interface MockMapProps {
   onMouseMove: (e: MockLngLat) => void
   onMouseUp: () => void
   interactiveLayerIds?: string[]
+  mapStyle: string
   children: ReactNode
 }
+
+// deck.gl needs a real webgl context, so the 3d plan is mocked down to its input
+vi.mock('./FlightOverlay', () => ({
+  FlightOverlay: ({ waypoints }: { waypoints: { alt?: number }[] }) => (
+    <div data-testid="mock-flight-overlay" data-altitudes={waypoints.map((w) => w.alt ?? 0).join(',')} />
+  ),
+}))
 
 vi.mock('react-map-gl/mapbox', () => ({
   default: ({
@@ -23,9 +32,14 @@ vi.mock('react-map-gl/mapbox', () => ({
     onMouseMove,
     onMouseUp,
     interactiveLayerIds,
+    mapStyle,
     children,
   }: MockMapProps) => (
-    <div data-testid="mock-map-root" data-interactive={(interactiveLayerIds ?? []).join(',')}>
+    <div
+      data-testid="mock-map-root"
+      data-interactive={(interactiveLayerIds ?? []).join(',')}
+      data-style={mapStyle}
+    >
       <div data-testid="mock-map" onClick={() => onClick({ lngLat: { lng: 10, lat: 20 } })}>
         {children}
       </div>
@@ -59,12 +73,12 @@ vi.mock('react-map-gl/mapbox', () => ({
   }: {
     id: string
     children: ReactNode
-    data: GeoJSON.FeatureCollection
+    data?: GeoJSON.FeatureCollection
   }) => (
     <div
       data-testid={`mock-source-${id}`}
-      data-count={data.features.length}
-      data-selected={data.features.filter((f) => f.properties?.selected).length}
+      data-count={data?.features.length ?? 0}
+      data-selected={data?.features.filter((f) => f.properties?.selected).length ?? 0}
     >
       {children}
     </div>
@@ -85,24 +99,24 @@ describe('MapView', () => {
     expect(onMapClick).toHaveBeenCalledWith({ lng: 10, lat: 20 })
   })
 
-  it('builds a point per waypoint plus a connecting line once there are two or more', () => {
+  it('hands the plan to the 3d overlay with each waypoint altitude', () => {
     render(
       <MapView
         waypoints={[
-          { lat: 1, lng: 2 },
-          { lat: 3, lng: 4 },
+          { lat: 1, lng: 2, alt: 40 },
+          { lat: 3, lng: 4, alt: 60 },
         ]}
         onMapClick={() => {}}
       />,
     )
 
-    expect(screen.getByTestId('mock-source-flight-plan')).toHaveAttribute('data-count', '3')
+    expect(screen.getByTestId('mock-flight-overlay')).toHaveAttribute('data-altitudes', '40,60')
   })
 
-  it('renders only point features for a single waypoint', () => {
-    render(<MapView waypoints={[{ lat: 1, lng: 2 }]} onMapClick={() => {}} />)
+  it('sets up a terrain source so the ground has real relief', () => {
+    render(<MapView waypoints={[]} onMapClick={() => {}} />)
 
-    expect(screen.getByTestId('mock-source-flight-plan')).toHaveAttribute('data-count', '1')
+    expect(screen.getByTestId('mock-source-terrain-dem')).toBeInTheDocument()
   })
 
   it('draws the in-progress tool overlay in its own source', () => {
@@ -257,6 +271,53 @@ describe('MapView corner dragging', () => {
     renderDraggable()
 
     expect(screen.getByTestId('mock-source-tool-overlay')).toHaveAttribute('data-selected', '0')
+  })
+})
+
+describe('MapView style control', () => {
+  beforeEach(() => {
+    localStorage.clear()
+  })
+
+  it('offers both map and satellite', () => {
+    render(<MapView waypoints={[]} onMapClick={() => {}} />)
+
+    expect(screen.getByRole('button', { name: 'Map' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Satellite' })).toBeInTheDocument()
+  })
+
+  it('starts on the dark map', () => {
+    render(<MapView waypoints={[]} onMapClick={() => {}} />)
+
+    expect(screen.getByTestId('mock-map-root')).toHaveAttribute(
+      'data-style',
+      'mapbox://styles/mapbox/dark-v11',
+    )
+    expect(screen.getByRole('button', { name: 'Map' })).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  it('switches the map to satellite', async () => {
+    render(<MapView waypoints={[]} onMapClick={() => {}} />)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Satellite' }))
+
+    expect(screen.getByTestId('mock-map-root')).toHaveAttribute(
+      'data-style',
+      'mapbox://styles/mapbox/satellite-streets-v12',
+    )
+  })
+
+  it('remembers the choice for the next map', async () => {
+    const first = render(<MapView waypoints={[]} onMapClick={() => {}} />)
+    await userEvent.click(screen.getByRole('button', { name: 'Satellite' }))
+    first.unmount()
+
+    render(<MapView waypoints={[]} onMapClick={() => {}} />)
+
+    expect(screen.getByRole('button', { name: 'Satellite' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
   })
 })
 

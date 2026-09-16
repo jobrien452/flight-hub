@@ -1,0 +1,31 @@
+.map-style-control {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  z-index: 1;
+  display: flex;
+  gap: 1px;
+  padding: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.map-style-control button {
+  background: var(--panel);
+  border: none;
+  padding: 5px 10px;
+  font-size: 11px;
+  color: var(--text-dim);
+  cursor: pointer;
+}
+
+.map-style-control button:hover {
+  color: var(--text);
+}
+
+.map-style-control button.active {
+  background: var(--panel-raised);
+  color: var(--accent);
+}
