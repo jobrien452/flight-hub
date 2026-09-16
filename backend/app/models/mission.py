@@ -7,10 +7,23 @@ from pydantic import BaseModel, Field
 
 
 class MissionStatus(str, Enum):
-    # draft --publish--> published --every pilot reports in--> completed
+    # draft --admin publishes--> published --a pilot picks it up--> acknowledged
+    # --a pilot flies it--> in_flight --every pilot reports in--> completed
+    #
+    # the middle two move on the first pilot to act, they say work has begun.
+    # completion is the strict one and waits for everybody
     DRAFT = "draft"
     PUBLISHED = "published"
+    ACKNOWLEDGED = "acknowledged"
+    IN_FLIGHT = "in_flight"
     COMPLETED = "completed"
+
+
+# what a pilot may move a mission on from
+ACKNOWLEDGEABLE = {MissionStatus.PUBLISHED}
+STARTABLE = {MissionStatus.PUBLISHED, MissionStatus.ACKNOWLEDGED}
+# a mission still awaiting reports, whatever stage of flying it has reached
+OPEN_STATUSES = {MissionStatus.PUBLISHED, MissionStatus.ACKNOWLEDGED, MissionStatus.IN_FLIGHT}
 
 
 class Waypoint(BaseModel):

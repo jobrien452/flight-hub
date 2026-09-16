@@ -16,20 +16,31 @@ async def test_an_admin_can_read_the_spec(client, admin_headers):
     assert spec["info"]["title"] == "Flyby Mission Planner"
 
 
-async def test_the_spec_covers_every_router(client, admin_headers):
+async def test_the_spec_covers_the_documented_routes(client, admin_headers):
     spec = (await client.get("/openapi.json", headers=admin_headers)).json()
 
     for path in [
-        "/auth/login",
         "/missions",
         "/missions/{mission_id}/publish",
         "/missions/{mission_id}/assignments",
         "/missions/{mission_id}/reports",
+        "/missions/{mission_id}/acknowledge",
+        "/missions/{mission_id}/start",
+        "/me/missions",
+        "/me/reports",
         "/users",
         "/users/me",
-        "/api-tokens",
     ]:
         assert path in spec["paths"], f"{path} missing from the spec"
+
+
+async def test_credential_routes_stay_out_of_the_spec(client, admin_headers):
+    # nothing here works with an api token, so documenting it only misleads
+    spec = (await client.get("/openapi.json", headers=admin_headers)).json()
+
+    for path in spec["paths"]:
+        assert not path.startswith("/auth"), f"{path} should not be documented"
+        assert not path.startswith("/api-tokens"), f"{path} should not be documented"
 
 
 async def test_the_builtin_docs_pages_are_gone(client, admin_headers):

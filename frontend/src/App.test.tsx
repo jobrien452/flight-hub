@@ -49,9 +49,22 @@ describe('sign out', () => {
     localStorage.setItem('flyby.session', JSON.stringify(session))
     renderApp('/missions')
 
-    await userEvent.click(screen.getByRole('button', { name: 'Sign out' }))
+    await userEvent.click(screen.getByRole('button', { name: /Ada Admin/ }))
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Sign out' }))
 
     expect(screen.getByRole('heading', { name: 'Sign in' })).toBeInTheDocument()
     expect(localStorage.getItem('flyby.session')).toBeNull()
+  })
+})
+
+describe('profile', () => {
+  it('is reached from the user menu rather than the main navigation', async () => {
+    localStorage.setItem('flyby.session', JSON.stringify(session))
+    renderApp('/missions')
+
+    expect(screen.queryByRole('link', { name: 'Profile' })).not.toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: /Ada Admin/ }))
+    expect(screen.getByRole('menuitem', { name: 'Profile' })).toBeInTheDocument()
   })
 })

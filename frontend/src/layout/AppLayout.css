@@ -45,29 +45,68 @@
   border-bottom-color: var(--accent);
 }
 
-.user {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 13px;
+.user-menu {
+  position: relative;
 }
 
-.user .role {
+.user-menu-trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  padding: 4px 8px;
+  cursor: pointer;
+}
+
+.user-menu-trigger:hover,
+.user-menu-trigger[aria-expanded='true'] {
+  border-color: var(--border);
+}
+
+.user-menu-trigger .role {
   color: var(--text-dim);
   text-transform: uppercase;
   font-size: 11px;
 }
 
-.user button {
-  background: transparent;
+.user-menu-caret {
+  color: var(--text-dim);
+  font-size: 10px;
+}
+
+.user-menu-items {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  min-width: 140px;
+  padding: 4px;
+  background: var(--panel-raised);
   border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
+.user-menu-items a,
+.user-menu-items button {
+  background: none;
+  border: none;
   border-radius: 3px;
-  padding: 4px 10px;
+  padding: 7px 8px;
+  font-size: 13px;
+  text-align: left;
+  text-decoration: none;
+  color: var(--text);
   cursor: pointer;
 }
 
-.user button:hover {
-  border-color: var(--text-dim);
+.user-menu-items a:hover,
+.user-menu-items button:hover {
+  background: var(--panel);
 }
 
 .content {

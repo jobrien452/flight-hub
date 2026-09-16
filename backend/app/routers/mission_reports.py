@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.deps import CurrentUser, get_current_user
 from app.mission_access import get_owned_mission
-from app.models.mission import Mission, MissionStatus
+from app.models.mission import OPEN_STATUSES, Mission, MissionStatus
 from app.models.mission_report import MissionReport, MissionReportStatus
 from app.models.user import Role
 from app.schemas.mission_report import MissionReportCreate, MissionReportOut, MissionReportUpdate
@@ -21,7 +21,7 @@ async def _complete_if_everyone_reported(mission_id: str) -> None:
     # a mission is done once every assigned pilot has filed, one pilot finishing
     # early doesn't finish the job for the rest
     mission = await Mission.get(PydanticObjectId(mission_id))
-    if mission is None or mission.status != MissionStatus.PUBLISHED:
+    if mission is None or mission.status not in OPEN_STATUSES:
         return
 
     submitted = await MissionReport.find(

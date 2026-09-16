@@ -58,3 +58,84 @@
   background: var(--panel-raised);
   border-color: var(--border);
 }
+
+/* swagger renders request and response examples as near-black text on a dark
+   slab, which is unreadable. these are the pieces that carry that text */
+.api-docs .swagger-ui .microlight,
+.api-docs .swagger-ui .highlight-code > .microlight,
+.api-docs .swagger-ui .highlight-code > .microlight code,
+.api-docs .swagger-ui .renderedMarkdown code,
+.api-docs .swagger-ui .body-param__example,
+.api-docs .swagger-ui .curl,
+.api-docs .swagger-ui .response-col_description__inner div.renderedMarkdown p {
+  color: var(--text) !important;
+  background: var(--bg) !important;
+}
+
+/* the syntax highlighter colours each token inline, so they need overriding too */
+.api-docs .swagger-ui .microlight span {
+  color: var(--text) !important;
+}
+
+.api-docs .swagger-ui .prop-type {
+  color: #8fb7ff;
+}
+
+.api-docs .swagger-ui .prop-format,
+.api-docs .swagger-ui .model .property.primitive,
+.api-docs .swagger-ui table.model tr.property-row td:first-child {
+  color: var(--text-dim);
+}
+
+.api-docs .swagger-ui .model,
+.api-docs .swagger-ui .model-title,
+.api-docs .swagger-ui .model .brace-close,
+.api-docs .swagger-ui .model .brace-open {
+  color: var(--text);
+}
+
+.api-docs .swagger-ui .responses-inner h4,
+.api-docs .swagger-ui .responses-inner h5,
+.api-docs .swagger-ui .tab li,
+.api-docs .swagger-ui .opblock-description-wrapper p,
+.api-docs .swagger-ui .opblock-external-docs-wrapper p,
+.api-docs .swagger-ui .opblock-title_normal p,
+.api-docs .swagger-ui .response-col_links {
+  color: var(--text);
+}
+
+.api-docs .swagger-ui .parameter__in,
+.api-docs .swagger-ui .parameter__deprecated,
+.api-docs .swagger-ui .opblock-summary-description {
+  color: var(--text-dim);
+}
+
+.api-docs .swagger-ui table thead tr td,
+.api-docs .swagger-ui table thead tr th {
+  border-bottom-color: var(--border);
+}
+
+.api-docs .swagger-ui .opblock {
+  background: var(--panel-raised);
+  border-color: var(--border);
+}
+
+.api-docs .swagger-ui .opblock .opblock-summary {
+  border-bottom-color: var(--border);
+}
+
+.api-docs .swagger-ui .btn {
+  color: var(--text);
+  border-color: var(--border);
+  background: var(--panel);
+}
+
+.api-docs .swagger-ui .btn.execute {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--bg);
+}
+
+.api-docs .swagger-ui .opblock-body pre.microlight {
+  border: 1px solid var(--border);
+}

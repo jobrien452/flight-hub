@@ -7,7 +7,7 @@ from app.config import settings
 from app.db import init_db
 from app.deps import CurrentUser, require_admin
 from app.invites import sync_invites
-from app.routers import api_tokens, auth, mission_reports, missions, users
+from app.routers import api_tokens, auth, me, mission_reports, missions, users
 
 
 @asynccontextmanager
@@ -37,11 +37,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(auth.router)
+# auth takes passwords and api-tokens mints credentials, neither works with a
+# token, so both stay out of the spec rather than inviting calls that cannot work
+app.include_router(auth.router, include_in_schema=False)
+app.include_router(api_tokens.router, include_in_schema=False)
 app.include_router(missions.router)
 app.include_router(mission_reports.router)
+app.include_router(me.router)
 app.include_router(users.router)
-app.include_router(api_tokens.router)
 
 
 @app.get("/openapi.json", include_in_schema=False)

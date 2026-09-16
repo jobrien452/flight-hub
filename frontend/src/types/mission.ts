@@ -1,5 +1,11 @@
-// draft --publish--> published --every pilot reports in--> completed
-export type MissionStatus = 'draft' | 'published' | 'completed'
+// draft --publish--> published --pilot picks it up--> acknowledged
+// --pilot flies it--> in_flight --every pilot reports in--> completed
+export type MissionStatus =
+  | 'draft'
+  | 'published'
+  | 'acknowledged'
+  | 'in_flight'
+  | 'completed'
 
 export interface Waypoint {
   lat: number

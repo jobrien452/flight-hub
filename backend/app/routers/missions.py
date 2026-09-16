@@ -7,7 +7,12 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from app.deps import CurrentUser, get_current_user, require_admin
 from app.email_client import send_mission_assigned_email, send_mission_unassigned_email
 from app.mission_access import get_owned_mission
-from app.models.mission import Mission, MissionStatus
+from app.models.mission import (
+    ACKNOWLEDGEABLE,
+    STARTABLE,
+    Mission,
+    MissionStatus,
+)
 from app.models.user import Role, User
 from app.schemas.mission import (
     MissionAssign,
@@ -107,6 +112,44 @@ async def publish_mission(
     mission.updated_at = datetime.now(timezone.utc)
     await mission.save()
     return _out(mission)
+
+
+async def _pilot_advance(
+    mission_id: str,
+    current_user: CurrentUser,
+    allowed_from: set[MissionStatus],
+    to: MissionStatus,
+) -> MissionOut:
+    if current_user.role != Role.PILOT:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="pilots only")
+
+    mission = await get_owned_mission(mission_id, current_user)  # 403 unless assigned
+    if mission.status not in allowed_from:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"a {mission.status.value} mission cannot move to {to.value}",
+        )
+
+    mission.status = to
+    mission.updated_at = datetime.now(timezone.utc)
+    await mission.save()
+    return _out(mission)
+
+
+@router.post("/{mission_id}/acknowledge", response_model=MissionOut)
+async def acknowledge_mission(
+    mission_id: str, current_user: CurrentUser = Depends(get_current_user)
+) -> MissionOut:
+    return await _pilot_advance(
+        mission_id, current_user, ACKNOWLEDGEABLE, MissionStatus.ACKNOWLEDGED
+    )
+
+
+@router.post("/{mission_id}/start", response_model=MissionOut)
+async def start_mission(
+    mission_id: str, current_user: CurrentUser = Depends(get_current_user)
+) -> MissionOut:
+    return await _pilot_advance(mission_id, current_user, STARTABLE, MissionStatus.IN_FLIGHT)
 
 
 @router.post("/{mission_id}/assignments", response_model=MissionOut)
