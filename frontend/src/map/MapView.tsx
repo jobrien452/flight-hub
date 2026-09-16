@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import { useRef, useState } from 'react'
 import Map, { Layer, Source } from 'react-map-gl/mapbox'
 import type { MapMouseEvent, MapRef } from 'react-map-gl/mapbox'
 import { AddressSearch } from './AddressSearch'
@@ -37,9 +37,10 @@ function toFeatureCollection(waypoints: Waypoint[]): GeoJSON.FeatureCollection {
 
 // corners the user has dropped so far, plus the closed box once it snaps
 function toOverlayCollection(overlay: ToolOverlay): GeoJSON.FeatureCollection {
-  const markers: GeoJSON.Feature[] = overlay.markers.map((w) => ({
+  const markers: GeoJSON.Feature[] = overlay.markers.map((w, index) => ({
     type: 'Feature',
-    properties: {},
+    // index rides along so a grabbed handle knows which corner it is
+    properties: { index },
     geometry: { type: 'Point', coordinates: [w.lng, w.lat] },
   }))
 
@@ -65,10 +66,25 @@ interface MapViewProps {
   waypoints: Waypoint[]
   onMapClick: (point: LngLat) => void
   overlay?: ToolOverlay
+  onHandleDragStart?: (index: number) => void
+  onHandleDrag?: (point: LngLat) => void
+  onHandleDragEnd?: () => void
 }
 
-export function MapView({ waypoints, onMapClick, overlay }: MapViewProps) {
+export function MapView({
+  waypoints,
+  onMapClick,
+  overlay,
+  onHandleDragStart,
+  onHandleDrag,
+  onHandleDragEnd,
+}: MapViewProps) {
   const mapRef = useRef<MapRef>(null)
+  const draggingRef = useRef(false)
+  // a drag ends with a click event, which would otherwise drop a new corner
+  const swallowClickRef = useRef(false)
+  const [hoveringHandle, setHoveringHandle] = useState(false)
+  const [dragging, setDragging] = useState(false)
 
   if (!MAPBOX_TOKEN) {
     return (
@@ -81,7 +97,35 @@ export function MapView({ waypoints, onMapClick, overlay }: MapViewProps) {
   const first = waypoints[0]
 
   function handleClick(event: MapMouseEvent) {
+    if (swallowClickRef.current) {
+      swallowClickRef.current = false
+      return
+    }
     onMapClick({ lng: event.lngLat.lng, lat: event.lngLat.lat })
+  }
+
+  function handleMouseDown(event: MapMouseEvent) {
+    const index = event.features?.[0]?.properties?.index
+    if (typeof index !== 'number') return
+
+    // keeps the map from panning out from under the handle
+    event.preventDefault()
+    draggingRef.current = true
+    swallowClickRef.current = true
+    setDragging(true)
+    onHandleDragStart?.(index)
+  }
+
+  function handleMouseMove(event: MapMouseEvent) {
+    if (!draggingRef.current) return
+    onHandleDrag?.({ lng: event.lngLat.lng, lat: event.lngLat.lat })
+  }
+
+  function handleMouseUp() {
+    if (!draggingRef.current) return
+    draggingRef.current = false
+    setDragging(false)
+    onHandleDragEnd?.()
   }
 
   function handleAddressSelect(lng: number, lat: number) {
@@ -100,7 +144,14 @@ export function MapView({ waypoints, onMapClick, overlay }: MapViewProps) {
           zoom: first ? 15 : 10,
         }}
         mapStyle="mapbox://styles/mapbox/dark-v11"
+        cursor={dragging ? 'grabbing' : hoveringHandle ? 'grab' : undefined}
+        interactiveLayerIds={overlay?.ghost ? ['overlay-corners'] : undefined}
         onClick={handleClick}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseEnter={() => setHoveringHandle(true)}
+        onMouseLeave={() => setHoveringHandle(false)}
       >
         {overlay && (overlay.markers.length > 0 || overlay.ghost) && (
           <Source id="tool-overlay" type="geojson" data={toOverlayCollection(overlay)}>
@@ -121,8 +172,9 @@ export function MapView({ waypoints, onMapClick, overlay }: MapViewProps) {
               type="circle"
               filter={['==', ['geometry-type'], 'Point']}
               paint={{
-                'circle-color': 'transparent',
-                'circle-radius': 5,
+                'circle-color': GHOST,
+                'circle-opacity': 0.25,
+                'circle-radius': 6,
                 'circle-stroke-color': GHOST,
                 'circle-stroke-width': 2,
               }}

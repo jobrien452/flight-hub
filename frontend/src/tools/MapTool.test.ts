@@ -1,4 +1,6 @@
-import { describe, expect, it } from 'vitest'
+import { distance } from '@turf/turf'
+import { describe, expect, it, vi } from 'vitest'
+import type { Waypoint } from '../types/mission'
 import { createRectangleSurveyTool, mapTools } from './MapTool'
 
 describe('tool registry', () => {
@@ -57,5 +59,72 @@ describe('rectangle survey overlay', () => {
     tool.onActivate()
 
     expect(tool.renderOverlay().markers).toHaveLength(0)
+  })
+
+  // ghost comes back as [SW, SE, NE, NW]
+  function widthOf(box: Waypoint[]) {
+    return distance([box[0].lng, box[0].lat], [box[1].lng, box[1].lat], { units: 'meters' })
+  }
+
+  it('resizes the box from the opposite corner when a handle is dragged', () => {
+    const tool = placedTool(4)
+    const before = tool.renderOverlay().ghost!
+
+    tool.onHandleDragStart(2)
+    tool.onHandleDrag({ lng: 10.004, lat: 20.002 })
+    tool.onHandleDragEnd()
+    const after = tool.renderOverlay().ghost!
+
+    expect(after[0]).toEqual(before[0])
+    expect(widthOf(after)).toBeGreaterThan(widthOf(before))
+  })
+
+  it('keeps the resized box snapped to a clean size', () => {
+    const tool = placedTool(4)
+
+    tool.onHandleDragStart(2)
+    tool.onHandleDrag({ lng: 10.00317, lat: 20.00143 })
+    tool.onHandleDragEnd()
+
+    expect(Math.round(widthOf(tool.renderOverlay().ghost!)) % 10).toBe(0)
+  })
+
+  it('reports the resized box so the survey has to be regenerated', () => {
+    const onChange = vi.fn()
+    const tool = createRectangleSurveyTool({ altitude: 50, spacing: 20 }, onChange)
+    tool.onActivate()
+    ;[
+      { lng: 10, lat: 20 },
+      { lng: 10.002, lat: 20 },
+      { lng: 10.002, lat: 20.001 },
+      { lng: 10, lat: 20.001 },
+    ].forEach(tool.onMapClick)
+    onChange.mockClear()
+
+    tool.onHandleDragStart(2)
+    tool.onHandleDrag({ lng: 10.004, lat: 20.002 })
+
+    expect(onChange).toHaveBeenCalledWith(
+      tool.renderOverlay().ghost,
+      expect.objectContaining({ type: 'survey' }),
+    )
+  })
+
+  it('ignores a drag when no handle was grabbed', () => {
+    const tool = placedTool(4)
+    const before = tool.renderOverlay().ghost!
+
+    tool.onHandleDrag({ lng: 10.004, lat: 20.002 })
+
+    expect(tool.renderOverlay().ghost).toEqual(before)
+  })
+
+  it('ignores a grab before the box is placed', () => {
+    const tool = placedTool(2)
+
+    tool.onHandleDragStart(0)
+    tool.onHandleDrag({ lng: 10.004, lat: 20.002 })
+
+    expect(tool.renderOverlay().ghost).toBeUndefined()
   })
 })

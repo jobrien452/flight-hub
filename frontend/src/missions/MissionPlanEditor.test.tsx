@@ -11,15 +11,30 @@ vi.mock('../map/MapView', () => ({
   MapView: ({
     onMapClick,
     overlay,
+    onHandleDragStart,
+    onHandleDrag,
+    onHandleDragEnd,
   }: {
     onMapClick: (p: { lng: number; lat: number }) => void
     overlay?: { markers: unknown[]; ghost?: unknown[] }
+    onHandleDragStart: (index: number) => void
+    onHandleDrag: (p: { lng: number; lat: number }) => void
+    onHandleDragEnd: () => void
   }) => (
     <div>
       <button onClick={() => onMapClick({ lng: 10, lat: 20 })}>click A</button>
       <button onClick={() => onMapClick({ lng: 10.002, lat: 20 })}>click B</button>
       <button onClick={() => onMapClick({ lng: 10.002, lat: 20.001 })}>click C</button>
       <button onClick={() => onMapClick({ lng: 10, lat: 20.001 })}>click D</button>
+      <button
+        onClick={() => {
+          onHandleDragStart(2)
+          onHandleDrag({ lng: 10.004, lat: 20.002 })
+          onHandleDragEnd()
+        }}
+      >
+        drag corner
+      </button>
       <span data-testid="overlay">
         {overlay?.markers.length ?? 0} markers{overlay?.ghost ? ' and a ghost' : ''}
       </span>
@@ -107,6 +122,21 @@ describe('MissionPlanEditor', () => {
     await userEvent.click(screen.getByText('click C'))
     await userEvent.click(screen.getByText('click D'))
 
+    expect(screen.getByTestId('overlay')).toHaveTextContent('4 markers and a ghost')
+  })
+
+  it('sends the survey back to be regenerated after the box is resized', async () => {
+    renderEditor()
+    await userEvent.click(screen.getByRole('button', { name: 'Rectangle Survey' }))
+    for (const corner of ['click A', 'click B', 'click C', 'click D']) {
+      await userEvent.click(screen.getByText(corner))
+    }
+    await userEvent.click(await screen.findByRole('button', { name: 'Generate Survey' }))
+    await waitFor(() => expect(screen.getByText(/waypoints$/)).toBeInTheDocument())
+
+    await userEvent.click(screen.getByText('drag corner'))
+
+    expect(await screen.findByText('box placed, click Generate Survey')).toBeInTheDocument()
     expect(screen.getByTestId('overlay')).toHaveTextContent('4 markers and a ghost')
   })
 

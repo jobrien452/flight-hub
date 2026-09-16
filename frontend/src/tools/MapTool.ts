@@ -21,6 +21,10 @@ export interface MapTool {
   onActivate: () => void
   onDeactivate: () => void
   onMapClick: (point: LngLat) => void
+  // dragging one of the overlay markers, by its index in renderOverlay().markers
+  onHandleDragStart: (index: number) => void
+  onHandleDrag: (point: LngLat) => void
+  onHandleDragEnd: () => void
   renderOverlay: () => ToolOverlay
 }
 
@@ -46,6 +50,10 @@ export function createWaypointTool(
       waypoints = [...waypoints, { lat: point.lat, lng: point.lng, alt: settings.altitude }]
       onChange(waypoints, { type: 'waypoint', waypoints })
     },
+    // nothing to grab, this tool draws no handles
+    onHandleDragStart: () => {},
+    onHandleDrag: () => {},
+    onHandleDragEnd: () => {},
     // every click lands straight in the plan, so there is no draft to preview
     renderOverlay: () => ({ markers: [] }),
   }
@@ -65,6 +73,15 @@ export function createRectangleSurveyTool(
 ): MapTool {
   let corners: LngLat[] = []
   let boundary: Waypoint[] = []
+  // corner held opposite the one being dragged, fixed for the whole gesture so
+  // the box does not fight back when a drag crosses over it
+  let anchor: Waypoint | null = null
+
+  function commit(box: Waypoint[]) {
+    boundary = box
+    corners = box
+    onChange(box, { type: 'survey', boundary: box, ...settings })
+  }
 
   return {
     id: 'rectangle_survey',
@@ -73,6 +90,7 @@ export function createRectangleSurveyTool(
     onActivate: () => {
       corners = []
       boundary = []
+      anchor = null
     },
     onDeactivate: () => {},
     onMapClick: (point) => {
@@ -86,9 +104,18 @@ export function createRectangleSurveyTool(
       corners = [...corners, point]
       if (corners.length !== 4) return
 
-      boundary = snapToRectangle(corners)
-      const planParams: SurveyPlanParams = { type: 'survey', boundary, ...settings }
-      onChange(boundary, planParams)
+      commit(snapToRectangle(corners))
+    },
+    onHandleDragStart: (index) => {
+      if (boundary.length !== 4) return
+      anchor = boundary[(index + 2) % 4]
+    },
+    onHandleDrag: (point) => {
+      if (!anchor) return
+      commit(snapToRectangle([anchor, point]))
+    },
+    onHandleDragEnd: () => {
+      anchor = null
     },
     // corners as they go down, then the snapped box so you can see where it
     // landed versus where you clicked

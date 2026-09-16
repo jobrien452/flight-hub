@@ -83,6 +83,19 @@ export function MissionPlanEditor({
     setOverlay(activeTool.renderOverlay())
   }
 
+  function handleCornerGrab(index: number) {
+    activeTool.onHandleDragStart(index)
+  }
+
+  function handleCornerMove(point: LngLat) {
+    activeTool.onHandleDrag(point)
+    setOverlay(activeTool.renderOverlay())
+  }
+
+  function handleCornerRelease() {
+    activeTool.onHandleDragEnd()
+  }
+
   // switching tools always starts a fresh plan, no partial-append across tools
   function handleToolSelect(id: 'waypoint' | 'rectangle_survey') {
     activeTool.onDeactivate()
@@ -209,7 +222,14 @@ export function MissionPlanEditor({
       </aside>
 
       <div className="plan-editor-map">
-        <MapView waypoints={waypoints} onMapClick={handleMapClick} overlay={overlay} />
+        <MapView
+          waypoints={waypoints}
+          onMapClick={handleMapClick}
+          overlay={overlay}
+          onHandleDragStart={handleCornerGrab}
+          onHandleDrag={handleCornerMove}
+          onHandleDragEnd={handleCornerRelease}
+        />
       </div>
     </div>
   )

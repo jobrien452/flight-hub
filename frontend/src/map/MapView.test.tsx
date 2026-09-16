@@ -3,16 +3,45 @@ import type { ReactNode } from 'react'
 import { describe, expect, it, vi } from 'vitest'
 import { MapView } from './MapView'
 
+interface MockLngLat {
+  lngLat: { lng: number; lat: number }
+}
+
+interface MockMapProps {
+  onClick: (e: MockLngLat) => void
+  onMouseDown: (e: MockLngLat & { features: unknown[]; preventDefault: () => void }) => void
+  onMouseMove: (e: MockLngLat) => void
+  onMouseUp: () => void
+  children: ReactNode
+}
+
 vi.mock('react-map-gl/mapbox', () => ({
-  default: ({
-    onClick,
-    children,
-  }: {
-    onClick: (e: { lngLat: { lng: number; lat: number } }) => void
-    children: ReactNode
-  }) => (
-    <div data-testid="mock-map" onClick={() => onClick({ lngLat: { lng: 10, lat: 20 } })}>
-      {children}
+  default: ({ onClick, onMouseDown, onMouseMove, onMouseUp, children }: MockMapProps) => (
+    <div>
+      <div data-testid="mock-map" onClick={() => onClick({ lngLat: { lng: 10, lat: 20 } })}>
+        {children}
+      </div>
+      <button
+        data-testid="grab-corner"
+        onClick={() =>
+          onMouseDown({
+            features: [{ properties: { index: 2 } }],
+            lngLat: { lng: 10, lat: 20 },
+            preventDefault: () => {},
+          })
+        }
+      />
+      <button
+        data-testid="grab-nothing"
+        onClick={() =>
+          onMouseDown({ features: [], lngLat: { lng: 10, lat: 20 }, preventDefault: () => {} })
+        }
+      />
+      <button
+        data-testid="move-pointer"
+        onClick={() => onMouseMove({ lngLat: { lng: 11, lat: 21 } })}
+      />
+      <button data-testid="release" onClick={() => onMouseUp()} />
     </div>
   ),
   Source: ({
@@ -102,5 +131,81 @@ describe('MapView', () => {
     render(<MapView waypoints={[]} onMapClick={() => {}} />)
 
     expect(screen.queryByTestId('mock-source-tool-overlay')).not.toBeInTheDocument()
+  })
+})
+
+describe('MapView corner dragging', () => {
+  const box = [
+    { lat: 1, lng: 2 },
+    { lat: 1, lng: 3 },
+    { lat: 2, lng: 3 },
+    { lat: 2, lng: 2 },
+  ]
+
+  function renderDraggable(handlers: Partial<Record<string, ReturnType<typeof vi.fn>>> = {}) {
+    const props = {
+      onMapClick: vi.fn(),
+      onHandleDragStart: vi.fn(),
+      onHandleDrag: vi.fn(),
+      onHandleDragEnd: vi.fn(),
+      ...handlers,
+    }
+    render(<MapView waypoints={[]} overlay={{ markers: box, ghost: box }} {...props} />)
+    return props
+  }
+
+  it('reports which corner was grabbed', () => {
+    const props = renderDraggable()
+
+    fireEvent.click(screen.getByTestId('grab-corner'))
+
+    expect(props.onHandleDragStart).toHaveBeenCalledWith(2)
+  })
+
+  it('reports the pointer position while a corner is held', () => {
+    const props = renderDraggable()
+
+    fireEvent.click(screen.getByTestId('grab-corner'))
+    fireEvent.click(screen.getByTestId('move-pointer'))
+
+    expect(props.onHandleDrag).toHaveBeenCalledWith({ lng: 11, lat: 21 })
+  })
+
+  it('ignores pointer movement when no corner was grabbed', () => {
+    const props = renderDraggable()
+
+    fireEvent.click(screen.getByTestId('grab-nothing'))
+    fireEvent.click(screen.getByTestId('move-pointer'))
+
+    expect(props.onHandleDrag).not.toHaveBeenCalled()
+  })
+
+  it('ends the drag on release', () => {
+    const props = renderDraggable()
+
+    fireEvent.click(screen.getByTestId('grab-corner'))
+    fireEvent.click(screen.getByTestId('release'))
+    fireEvent.click(screen.getByTestId('move-pointer'))
+
+    expect(props.onHandleDragEnd).toHaveBeenCalled()
+    expect(props.onHandleDrag).not.toHaveBeenCalled()
+  })
+
+  it('swallows the click that ends a drag so it does not place a new corner', () => {
+    const props = renderDraggable()
+
+    fireEvent.click(screen.getByTestId('grab-corner'))
+    fireEvent.click(screen.getByTestId('release'))
+    fireEvent.click(screen.getByTestId('mock-map'))
+
+    expect(props.onMapClick).not.toHaveBeenCalled()
+  })
+
+  it('still places a corner on a plain map click', () => {
+    const props = renderDraggable()
+
+    fireEvent.click(screen.getByTestId('mock-map'))
+
+    expect(props.onMapClick).toHaveBeenCalledWith({ lng: 10, lat: 20 })
   })
 })
