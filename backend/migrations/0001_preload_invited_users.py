@@ -8,7 +8,7 @@ dependencies = []
 
 PRELOADED_USERS = [
     {"name": "Ada Admin", "email": "jakeo8@vt.edu", "role": "admin"},
-    {"name": "Pete Pilot", "email": "pete@flyby-robotics.dev", "role": "pilot"},
+    {"name": "Pete Pilot", "email": "jake.obrien452@gmail.com", "role": "pilot"},
 ]
 
 
