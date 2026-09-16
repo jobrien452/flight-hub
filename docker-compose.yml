@@ -5,6 +5,11 @@ services:
       - "27017:27017"
     volumes:
       - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 5s
+      timeout: 5s
+      retries: 60 # ~5 minutes at a 5s interval
 
   backend:
     build: ./backend
@@ -17,7 +22,8 @@ services:
       MONGO_URL: mongodb://mongo:27017
       MONGO_DB_NAME: flyby
     depends_on:
-      - mongo
+      mongo:
+        condition: service_healthy
 
   frontend:
     build:
