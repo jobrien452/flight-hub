@@ -3,7 +3,13 @@ import { listUsers } from '../api/users'
 import { useAuth } from '../auth/useAuth'
 import { MapView } from '../map/MapView'
 import { generateSurveyPlan } from '../planning/flightPlanGenerators'
-import { createRectangleSurveyTool, createWaypointTool, type MapTool } from '../tools/MapTool'
+import {
+  createRectangleSurveyTool,
+  createWaypointTool,
+  type LngLat,
+  type MapTool,
+  type ToolOverlay,
+} from '../tools/MapTool'
 import type { Mission, MissionStatus, PlanParams, Waypoint } from '../types/mission'
 import type { User } from '../types/user'
 import './MissionPlanEditor.css'
@@ -44,6 +50,7 @@ export function MissionPlanEditor({
   const [altitude, setAltitude] = useState(50)
   const [spacing, setSpacing] = useState(20)
   const [surveyGenerated, setSurveyGenerated] = useState(false)
+  const [overlay, setOverlay] = useState<ToolOverlay>({ markers: [] })
 
   useEffect(() => {
     // pilots aren't assignable until the mission exists, no point fetching yet
@@ -69,6 +76,13 @@ export function MissionPlanEditor({
 
   const activeTool = tools[activeToolId]
 
+  // the tool keeps its own draft state, so pull the overlay after every click
+  // to get the corners on screen as they land
+  function handleMapClick(point: LngLat) {
+    activeTool.onMapClick(point)
+    setOverlay(activeTool.renderOverlay())
+  }
+
   // switching tools always starts a fresh plan, no partial-append across tools
   function handleToolSelect(id: 'waypoint' | 'rectangle_survey') {
     activeTool.onDeactivate()
@@ -77,6 +91,7 @@ export function MissionPlanEditor({
     setWaypoints([])
     setPlanParams(null)
     setSurveyGenerated(false)
+    setOverlay({ markers: [] })
   }
 
   // the box is just an outline until this runs, uses whatever altitude/spacing
@@ -194,7 +209,7 @@ export function MissionPlanEditor({
       </aside>
 
       <div className="plan-editor-map">
-        <MapView waypoints={waypoints} onMapClick={activeTool.onMapClick} />
+        <MapView waypoints={waypoints} onMapClick={handleMapClick} overlay={overlay} />
       </div>
     </div>
   )

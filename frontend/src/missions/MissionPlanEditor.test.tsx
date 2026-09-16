@@ -8,12 +8,21 @@ import type { Mission } from '../types/mission'
 import { MissionPlanEditor } from './MissionPlanEditor'
 
 vi.mock('../map/MapView', () => ({
-  MapView: ({ onMapClick }: { onMapClick: (p: { lng: number; lat: number }) => void }) => (
+  MapView: ({
+    onMapClick,
+    overlay,
+  }: {
+    onMapClick: (p: { lng: number; lat: number }) => void
+    overlay?: { markers: unknown[]; ghost?: unknown[] }
+  }) => (
     <div>
       <button onClick={() => onMapClick({ lng: 10, lat: 20 })}>click A</button>
       <button onClick={() => onMapClick({ lng: 10.002, lat: 20 })}>click B</button>
       <button onClick={() => onMapClick({ lng: 10.002, lat: 20.001 })}>click C</button>
       <button onClick={() => onMapClick({ lng: 10, lat: 20.001 })}>click D</button>
+      <span data-testid="overlay">
+        {overlay?.markers.length ?? 0} markers{overlay?.ghost ? ' and a ghost' : ''}
+      </span>
     </div>
   ),
 }))
@@ -78,6 +87,36 @@ describe('MissionPlanEditor', () => {
     await userEvent.click(screen.getByText('click D'))
 
     expect(await screen.findByText('box placed, click Generate Survey')).toBeInTheDocument()
+  })
+
+  it('draws each corner on the map as it is clicked', async () => {
+    renderEditor()
+    await userEvent.click(screen.getByRole('button', { name: 'Rectangle Survey' }))
+    await userEvent.click(screen.getByText('click A'))
+    await userEvent.click(screen.getByText('click B'))
+
+    expect(screen.getByTestId('overlay')).toHaveTextContent('2 markers')
+    expect(screen.getByTestId('overlay')).not.toHaveTextContent('ghost')
+  })
+
+  it('draws the snapped box as a ghost once the fourth corner lands', async () => {
+    renderEditor()
+    await userEvent.click(screen.getByRole('button', { name: 'Rectangle Survey' }))
+    await userEvent.click(screen.getByText('click A'))
+    await userEvent.click(screen.getByText('click B'))
+    await userEvent.click(screen.getByText('click C'))
+    await userEvent.click(screen.getByText('click D'))
+
+    expect(screen.getByTestId('overlay')).toHaveTextContent('4 markers and a ghost')
+  })
+
+  it('clears the overlay when switching back to the waypoint tool', async () => {
+    renderEditor()
+    await userEvent.click(screen.getByRole('button', { name: 'Rectangle Survey' }))
+    await userEvent.click(screen.getByText('click A'))
+    await userEvent.click(screen.getByRole('button', { name: 'Waypoint' }))
+
+    expect(screen.getByTestId('overlay')).toHaveTextContent('0 markers')
   })
 
   it('generates the survey waypoints when Generate Survey is clicked', async () => {

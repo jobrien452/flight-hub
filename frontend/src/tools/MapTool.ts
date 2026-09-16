@@ -6,6 +6,13 @@ export interface LngLat {
   lat: number
 }
 
+// what the tool wants drawn while the user is still placing it, kept apart
+// from the committed plan waypoints so a draft never looks like a real route
+export interface ToolOverlay {
+  markers: Waypoint[]
+  ghost?: Waypoint[]
+}
+
 // common shape for anything on the toolbar, new tools just implement this
 export interface MapTool {
   id: string
@@ -14,7 +21,7 @@ export interface MapTool {
   onActivate: () => void
   onDeactivate: () => void
   onMapClick: (point: LngLat) => void
-  renderOverlay: () => Waypoint[]
+  renderOverlay: () => ToolOverlay
 }
 
 export interface WaypointToolSettings {
@@ -39,7 +46,8 @@ export function createWaypointTool(
       waypoints = [...waypoints, { lat: point.lat, lng: point.lng, alt: settings.altitude }]
       onChange(waypoints, { type: 'waypoint', waypoints })
     },
-    renderOverlay: () => waypoints,
+    // every click lands straight in the plan, so there is no draft to preview
+    renderOverlay: () => ({ markers: [] }),
   }
 }
 
@@ -68,14 +76,26 @@ export function createRectangleSurveyTool(
     },
     onDeactivate: () => {},
     onMapClick: (point) => {
-      corners = corners.length >= 4 ? [point] : [...corners, point]
+      // a click on a finished box starts a new one
+      if (corners.length >= 4) {
+        corners = [point]
+        boundary = []
+        return
+      }
+
+      corners = [...corners, point]
       if (corners.length !== 4) return
 
       boundary = snapToRectangle(corners)
       const planParams: SurveyPlanParams = { type: 'survey', boundary, ...settings }
       onChange(boundary, planParams)
     },
-    renderOverlay: () => boundary,
+    // corners as they go down, then the snapped box so you can see where it
+    // landed versus where you clicked
+    renderOverlay: () =>
+      boundary.length > 0
+        ? { markers: boundary, ghost: boundary }
+        : { markers: corners.map(({ lat, lng }) => ({ lat, lng })) },
   }
 }
 
