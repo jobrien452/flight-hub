@@ -6,6 +6,7 @@ export type Position3D = [number, number, number]
 export interface DropLine {
   from: Position3D
   to: Position3D
+  index: number
 }
 
 export interface ElevatedPoint {
@@ -34,13 +35,26 @@ export function toElevatedPoints(waypoints: Waypoint[], ground: number[] = []): 
 // a post from the ground up to each waypoint, so altitude reads as a height
 // instead of just a number in the infobox
 export function toDropLines(waypoints: Waypoint[], ground: number[] = []): DropLine[] {
+  return airborne(waypoints).map(({ w, index }) => ({
+    from: [w.lng, w.lat, groundAt(ground, index)] as Position3D,
+    to: [w.lng, w.lat, groundAt(ground, index) + altitudeOf(w)] as Position3D,
+    index,
+  }))
+}
+
+// the point on the ground each tether lands on, marking the floor below a waypoint
+export function toGroundPips(waypoints: Waypoint[], ground: number[] = []): ElevatedPoint[] {
+  return airborne(waypoints).map(({ w, index }) => ({
+    position: [w.lng, w.lat, groundAt(ground, index)] as Position3D,
+    index,
+  }))
+}
+
+// index is kept alongside so ground heights stay matched to their own waypoint
+function airborne(waypoints: Waypoint[]): { w: Waypoint; index: number }[] {
   return waypoints
     .map((w, index) => ({ w, index }))
     .filter(({ w }) => altitudeOf(w) > 0)
-    .map(({ w, index }) => ({
-      from: [w.lng, w.lat, groundAt(ground, index)] as Position3D,
-      to: [w.lng, w.lat, groundAt(ground, index) + altitudeOf(w)] as Position3D,
-    }))
 }
 
 export function toFlightPath(waypoints: Waypoint[], ground: number[] = []): Position3D[] {

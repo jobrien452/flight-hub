@@ -86,13 +86,21 @@
   gap: 6px;
 }
 
+/* Rectangle Survey wraps to two lines at this width, so the labels are centred
+   and the row given a floor, otherwise the short labels sit high in tall boxes */
 .tool-row button {
   flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  min-height: 36px;
   background: var(--panel-raised);
   border: 1px solid var(--border);
   border-radius: 3px;
-  padding: 6px;
+  padding: 6px 4px;
   font-size: 12px;
+  line-height: 1.25;
   cursor: pointer;
 }
 
