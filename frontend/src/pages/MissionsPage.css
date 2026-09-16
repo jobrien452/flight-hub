@@ -42,3 +42,8 @@
 .mission-table a {
   color: var(--text);
 }
+
+.header-actions {
+  display: flex;
+  gap: 8px;
+}

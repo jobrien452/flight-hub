@@ -1,0 +1,74 @@
+.plan-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 1px;
+  margin-bottom: 12px;
+  background: var(--border);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.plan-summary div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  background: var(--panel);
+}
+
+.plan-summary span {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.plan-summary strong {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.plan-map {
+  height: 320px;
+  margin-bottom: 20px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.plan-pilots-header h2 {
+  font-size: 15px;
+}
+
+.pilot-search {
+  font: inherit;
+  font-size: 13px;
+  width: 220px;
+  color: var(--text);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 6px 8px;
+}
+
+.pilot-search:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.row-action {
+  text-align: right;
+}
+
+.row-action button {
+  background: var(--panel-raised);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 5px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.row-action button:hover {
+  border-color: var(--accent);
+}

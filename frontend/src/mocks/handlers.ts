@@ -31,6 +31,7 @@ export const fixtureReport: MissionReport = {
 export const fixtureUsers: User[] = [
   { id: 'admin-1', name: 'Ada Admin', email: 'ada@flyby-robotics.dev', role: 'admin', has_password: true },
   { id: 'pilot-1', name: 'Pete Pilot', email: 'pete@flyby-robotics.dev', role: 'pilot', has_password: true },
+  { id: 'pilot-2', name: 'Priya Pilot', email: 'priya@flyby-robotics.dev', role: 'pilot', has_password: true },
 ]
 
 export const handlers = [
