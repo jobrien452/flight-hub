@@ -1,14 +1,29 @@
+/* the editor page fills the content area exactly, whatever the heading costs,
+   rather than guessing at the chrome above it and overflowing by the difference */
+.plan-page {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  height: 100%;
+}
+
 .plan-editor {
   display: grid;
   grid-template-columns: 260px 1fr;
   gap: 12px;
-  height: calc(100svh - 44px - 32px);
+  flex: 1;
+  min-height: 0;
 }
 
 @media (max-width: 700px) {
+  .plan-page {
+    height: auto;
+  }
+
   .plan-editor {
     grid-template-columns: 1fr;
-    height: auto;
+    flex: initial;
+    min-height: 420px;
   }
 }
 

@@ -1,7 +1,7 @@
 .shell {
   display: flex;
   flex-direction: column;
-  min-height: 100svh;
+  height: 100svh;
 }
 
 .topbar {
@@ -74,4 +74,6 @@
   flex: 1;
   padding: 16px;
   overflow: auto;
+  /* lets pages that fill the viewport shrink instead of overflowing the shell */
+  min-height: 0;
 }

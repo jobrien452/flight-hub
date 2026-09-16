@@ -5,6 +5,7 @@ import { AddressSearch } from './AddressSearch'
 import { FlightOverlay } from './FlightOverlay'
 import { MapStyleControl } from './MapStyleControl'
 import { MAP_STYLES, useMapStyle } from './mapStyles'
+import { applyTerrain } from './terrain'
 import type { LngLat, ToolOverlay } from '../tools/MapTool'
 import type { Waypoint } from '../types/mission'
 import 'mapbox-gl/dist/mapbox-gl.css'
@@ -115,6 +116,14 @@ export function MapView({
     onHandleDragEnd?.()
   }
 
+  // terrain needs its dem source to exist first, and a style swap drops both,
+  // so this runs on every style load rather than once at startup
+  function handleStyleLoad() {
+    const map = mapRef.current?.getMap()
+    if (!map?.isStyleLoaded()) return
+    applyTerrain(map)
+  }
+
   function handleAddressSelect(lng: number, lat: number) {
     mapRef.current?.flyTo({ center: [lng, lat], zoom: 15 })
   }
@@ -132,7 +141,8 @@ export function MapView({
           pitch: DEFAULT_PITCH,
         }}
         mapStyle={MAP_STYLES[styleId].url}
-        terrain={{ source: 'terrain-dem', exaggeration: 1 }}
+        onLoad={handleStyleLoad}
+        onStyleData={handleStyleLoad}
         cursor={dragging ? 'grabbing' : hoveringHandle ? 'grab' : undefined}
         interactiveLayerIds={overlay?.draggable ? ['overlay-corners'] : undefined}
         onClick={handleClick}
@@ -182,14 +192,6 @@ export function MapView({
             {infobox}
           </Popup>
         )}
-        {/* real hills under the plan, and what the elevated waypoints sit above */}
-        <Source
-          id="terrain-dem"
-          type="raster-dem"
-          url="mapbox://mapbox.mapbox-terrain-dem-v1"
-          tileSize={512}
-          maxzoom={14}
-        />
         <FlightOverlay waypoints={waypoints} />
       </Map>
       <MapStyleControl value={styleId} onChange={setStyleId} />

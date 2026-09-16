@@ -1,7 +1,7 @@
 .map-style-control {
   position: absolute;
   right: 10px;
-  bottom: 10px;
+  bottom: 25px;
   z-index: 1;
   display: flex;
   gap: 1px;

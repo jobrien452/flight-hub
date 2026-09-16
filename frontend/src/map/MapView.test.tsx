@@ -113,11 +113,6 @@ describe('MapView', () => {
     expect(screen.getByTestId('mock-flight-overlay')).toHaveAttribute('data-altitudes', '40,60')
   })
 
-  it('sets up a terrain source so the ground has real relief', () => {
-    render(<MapView waypoints={[]} onMapClick={() => {}} />)
-
-    expect(screen.getByTestId('mock-source-terrain-dem')).toBeInTheDocument()
-  })
 
   it('draws the in-progress tool overlay in its own source', () => {
     render(

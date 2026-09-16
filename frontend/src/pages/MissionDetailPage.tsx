@@ -129,7 +129,7 @@ export function MissionDetailPage() {
 
   if (editing) {
     return (
-      <div>
+      <div className="plan-page">
         <h1>Mission planning</h1>
         <MissionPlanEditor
           mission={mission}
