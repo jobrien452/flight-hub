@@ -101,7 +101,12 @@ vi.mock('react-map-gl/mapbox', () => ({
       />
       <button
         data-testid="move-pointer"
-        onClick={() => onMouseMove({ lngLat: { lng: 11, lat: 21 }, point: { x: 50, y: 60 } })}
+        onClick={() => onMouseMove({ lngLat: { lng: 11, lat: 21 }, point: { x: 140, y: 200 } })}
+      />
+      {/* a couple of pixels, the wobble of a normal click */}
+      <button
+        data-testid="nudge-pointer"
+        onClick={() => onMouseMove({ lngLat: { lng: 10.001, lat: 20.001 }, point: { x: 52, y: 61 } })}
       />
       <button data-testid="release" onClick={() => onMouseUp()} />
       <button data-testid="enter-layer" onClick={() => onMouseEnter()} />
@@ -263,6 +268,50 @@ describe('MapView corner dragging', () => {
 
     expect(props.onHandleDragEnd).toHaveBeenCalled()
     expect(props.onHandleDrag).not.toHaveBeenCalled()
+  })
+
+  it('does not move a handle for the wobble of an ordinary click', () => {
+    const props = renderDraggable()
+
+    fireEvent.click(screen.getByTestId('grab-corner'))
+    fireEvent.click(screen.getByTestId('nudge-pointer'))
+    fireEvent.click(screen.getByTestId('release'))
+
+    expect(props.onHandleDragStart).toHaveBeenCalled()
+    expect(props.onHandleDrag).not.toHaveBeenCalled()
+  })
+
+  it('moves once the pointer has actually travelled', () => {
+    const props = renderDraggable()
+
+    fireEvent.click(screen.getByTestId('grab-corner'))
+    fireEvent.click(screen.getByTestId('move-pointer'))
+
+    expect(props.onHandleDrag).toHaveBeenCalledWith({ lng: 11, lat: 21 })
+  })
+
+  it('keeps following small movements once the drag is under way', () => {
+    const props = renderDraggable()
+
+    fireEvent.click(screen.getByTestId('grab-corner'))
+    fireEvent.click(screen.getByTestId('move-pointer'))
+    fireEvent.click(screen.getByTestId('nudge-pointer'))
+
+    expect(props.onHandleDrag).toHaveBeenCalledTimes(2)
+  })
+
+  it('starts the threshold afresh on the next grab', () => {
+    const props = renderDraggable()
+
+    fireEvent.click(screen.getByTestId('grab-corner'))
+    fireEvent.click(screen.getByTestId('move-pointer'))
+    fireEvent.click(screen.getByTestId('release'))
+
+    // a second pick, jittering the way a real click does
+    fireEvent.click(screen.getByTestId('grab-corner'))
+    fireEvent.click(screen.getByTestId('nudge-pointer'))
+
+    expect(props.onHandleDrag).toHaveBeenCalledTimes(1)
   })
 
   it('keeps the grab cursor for the rectangle corner handles', () => {

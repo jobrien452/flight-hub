@@ -20,6 +20,8 @@ const GHOST = '#ff8a3d'
 const SELECTED = '#ffffff'
 // tilted by default, altitude is invisible looking straight down
 const DEFAULT_PITCH = 45
+// how far the pointer must travel before a grab counts as a drag rather than a click
+const DRAG_THRESHOLD_PX = 5
 
 // corners the user has dropped so far, plus the closed box once it snaps
 function toOverlayCollection(overlay: ToolOverlay): GeoJSON.FeatureCollection {
@@ -74,6 +76,8 @@ export function MapView({
   const draggingRef = useRef(false)
   // a drag ends with a click event, which would otherwise drop a new corner
   const swallowClickRef = useRef(false)
+  const dragOriginRef = useRef<{ x: number; y: number } | null>(null)
+  const passedThresholdRef = useRef(false)
   const [hoveringHandle, setHoveringHandle] = useState(false)
   const [hoveringWaypoint, setHoveringWaypoint] = useState(false)
   const [dragging, setDragging] = useState(false)
@@ -149,12 +153,24 @@ export function MapView({
     event.preventDefault()
     draggingRef.current = true
     swallowClickRef.current = true
+    dragOriginRef.current = { x: event.point.x, y: event.point.y }
+    passedThresholdRef.current = false
     setDragging(true)
     onHandleDragStart?.(index)
   }
 
   function handleMouseMove(event: MapMouseEvent) {
     if (draggingRef.current) {
+      // a click is never perfectly still, so hold the waypoint until the pointer
+      // has actually travelled. otherwise picking one twice nudges it a pixel
+      if (!passedThresholdRef.current) {
+        const origin = dragOriginRef.current
+        const travelled = origin
+          ? Math.hypot(event.point.x - origin.x, event.point.y - origin.y)
+          : Infinity
+        if (travelled < DRAG_THRESHOLD_PX) return
+        passedThresholdRef.current = true
+      }
       onHandleDrag?.({ lng: event.lngLat.lng, lat: event.lngLat.lat })
       return
     }

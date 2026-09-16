@@ -20,8 +20,9 @@ const TETHER: [number, number, number, number] = [145, 178, 242, 130]
 const TETHER_SELECTED: [number, number, number, number] = [255, 255, 255, 235]
 const PIP: [number, number, number, number] = [255, 255, 255, 200]
 const WAYPOINT_LAYER = 'flight-waypoints-3d'
-// forgiving enough to grab a 5px dot without a steady hand
-const PICK_RADIUS = 10
+// an invisible catchment well wider than the 5px dot, so waypoints are easy to
+// hit without having to aim
+const PICK_RADIUS = 18
 // short on, short off, reads as a dotted line at any zoom
 const TETHER_DASH: [number, number] = [2, 3]
 
