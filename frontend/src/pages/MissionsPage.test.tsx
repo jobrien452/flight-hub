@@ -78,30 +78,56 @@ describe('MissionsPage row menu', () => {
     expect(screen.queryByRole('menu')).not.toBeInTheDocument()
   })
 
-  it('offers view, edit, plan and delete', async () => {
+  it('offers view, edit, publish and delete for a draft', async () => {
     renderPage(adminSession)
     await openMenu()
 
     const menu = screen.getByRole('menu')
     expect(within(menu).getByRole('menuitem', { name: 'View' })).toBeInTheDocument()
     expect(within(menu).getByRole('menuitem', { name: 'Edit' })).toBeInTheDocument()
-    expect(within(menu).getByRole('menuitem', { name: 'Plan' })).toBeInTheDocument()
+    expect(within(menu).getByRole('menuitem', { name: 'Publish' })).toBeInTheDocument()
     expect(within(menu).getByRole('menuitem', { name: 'Delete' })).toBeInTheDocument()
   })
 
-  it('points view and plan at the right pages', async () => {
+  it('offers no Plan for a draft, there is nothing to plan against yet', async () => {
+    renderPage(adminSession)
+    await openMenu()
+
+    expect(
+      within(screen.getByRole('menu')).queryByRole('menuitem', { name: 'Plan' }),
+    ).not.toBeInTheDocument()
+  })
+
+  it('swaps Publish for Plan once the mission is published', async () => {
+    serveMissions({ status: 'published' })
     renderPage(adminSession)
     await openMenu()
 
     const menu = screen.getByRole('menu')
-    expect(within(menu).getByRole('menuitem', { name: 'View' })).toHaveAttribute(
-      'href',
-      `/missions/${fixtureMission.id}`,
-    )
+    expect(within(menu).queryByRole('menuitem', { name: 'Publish' })).not.toBeInTheDocument()
     expect(within(menu).getByRole('menuitem', { name: 'Plan' })).toHaveAttribute(
       'href',
       `/missions/${fixtureMission.id}/plan`,
     )
+  })
+
+  it('points view at the mission', async () => {
+    renderPage(adminSession)
+    await openMenu()
+
+    expect(within(screen.getByRole('menu')).getByRole('menuitem', { name: 'View' })).toHaveAttribute(
+      'href',
+      `/missions/${fixtureMission.id}`,
+    )
+  })
+
+  it('publishes from the menu and offers the assignment page', async () => {
+    renderPage(adminSession)
+    await openMenu()
+    await userEvent.click(within(screen.getByRole('menu')).getByRole('menuitem', { name: 'Publish' }))
+
+    expect(await screen.findByRole('dialog')).toHaveTextContent('assign pilots')
+    expect(screen.getByText('published')).toBeInTheDocument()
   })
 
   it('closes on escape', async () => {

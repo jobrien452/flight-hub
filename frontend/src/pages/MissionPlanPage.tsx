@@ -5,7 +5,7 @@ import { listUsers } from '../api/users'
 import { useAuth } from '../auth/useAuth'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { MapView } from '../map/MapView'
-import { formatDistance, formatDuration, summarisePlan } from '../planning/missionStats'
+import { PlanSummary } from '../missions/PlanSummary'
 import type { Mission } from '../types/mission'
 import type { User } from '../types/user'
 import './MissionPlanPage.css'
@@ -35,8 +35,6 @@ export function MissionPlanPage() {
       .catch(() => setLoadError('Could not load mission'))
     listUsers(session.token, 'pilot').then(setPilots).catch(() => setPilots([]))
   }, [session, id])
-
-  const stats = useMemo(() => summarisePlan(mission?.waypoints ?? []), [mission])
 
   const visiblePilots = useMemo(() => {
     const needle = search.trim().toLowerCase()
@@ -77,28 +75,7 @@ export function MissionPlanPage() {
         </Link>
       </div>
 
-      <div className="plan-summary">
-        <div>
-          <span className="text-dim">Waypoints</span>
-          <strong className="mono">{stats.waypointCount}</strong>
-        </div>
-        <div>
-          <span className="text-dim">Distance</span>
-          <strong className="mono">{formatDistance(stats.distanceMeters)}</strong>
-        </div>
-        <div>
-          <span className="text-dim">Est. flight time</span>
-          <strong className="mono">{formatDuration(stats.durationSeconds)}</strong>
-        </div>
-        <div>
-          <span className="text-dim">Altitude</span>
-          <strong className="mono">
-            {stats.minAltitude === stats.maxAltitude
-              ? `${stats.maxAltitude} m`
-              : `${stats.minAltitude}-${stats.maxAltitude} m`}
-          </strong>
-        </div>
-      </div>
+      <PlanSummary waypoints={mission.waypoints} />
 
       <div className="plan-map">
         <MapView waypoints={mission.waypoints} onMapClick={() => {}} />

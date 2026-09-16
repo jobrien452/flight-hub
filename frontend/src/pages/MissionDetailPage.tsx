@@ -1,11 +1,15 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { getMission, publishMission, updateMission } from '../api/missions'
+import { listUsers } from '../api/users'
 import { useAuth } from '../auth/useAuth'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { MapView } from '../map/MapView'
 import { MissionPlanEditor, type MissionPlanEditorValue } from '../missions/MissionPlanEditor'
+import { PlanSummary } from '../missions/PlanSummary'
 import type { Mission } from '../types/mission'
+import type { User } from '../types/user'
+import './MissionDetailPage.css'
 import './MissionsPage.css'
 
 export function MissionDetailPage() {
@@ -23,12 +27,20 @@ export function MissionDetailPage() {
   const [publishing, setPublishing] = useState(false)
   const [offerAssignment, setOfferAssignment] = useState(false)
 
+  const [pilots, setPilots] = useState<User[]>([])
+
   useEffect(() => {
     if (!session || !id) return
     getMission(id, session.token)
       .then(setMission)
       .catch(() => setLoadError('Could not load mission'))
   }, [session, id])
+
+  useEffect(() => {
+    // only admins may list users, so pilots viewing a mission skip this
+    if (session?.role !== 'admin') return
+    listUsers(session.token, 'pilot').then(setPilots).catch(() => setPilots([]))
+  }, [session])
 
   async function save(value: MissionPlanEditorValue): Promise<Mission | null> {
     if (!session || !id) return null
@@ -75,6 +87,21 @@ export function MissionDetailPage() {
     }
   }
 
+  // publishing straight from the view, nothing on screen to save first
+  async function handlePublishFromView() {
+    if (!session || !id) return
+    setPublishing(true)
+    setSaveError(null)
+    try {
+      setMission(await publishMission(id, session.token))
+      setOfferAssignment(true)
+    } catch {
+      setSaveError('Could not publish this mission')
+    } finally {
+      setPublishing(false)
+    }
+  }
+
   function handleEditClick() {
     // editing a mission pilots are already flying against deserves a second look
     if (mission?.assigned_pilot_ids.length) {
@@ -86,6 +113,9 @@ export function MissionDetailPage() {
 
   if (loadError) return <p className="auth-error">{loadError}</p>
   if (!mission) return <p className="text-dim">Loading...</p>
+
+  const isDraft = mission.status === 'draft'
+  const assignedPilots = pilots.filter((p) => mission.assigned_pilot_ids.includes(p.id))
 
   const assignmentOffer = offerAssignment && (
     <ConfirmDialog
@@ -124,19 +154,50 @@ export function MissionDetailPage() {
             <button type="button" className="button" onClick={handleEditClick}>
               Edit
             </button>
-            <Link className="button button-secondary" to={`/missions/${mission.id}/plan`}>
-              Plan
-            </Link>
+            {isDraft && (
+              <button
+                type="button"
+                className="button button-secondary"
+                disabled={mission.waypoints.length === 0 || publishing}
+                onClick={handlePublishFromView}
+              >
+                {publishing ? 'Publishing...' : 'Publish'}
+              </button>
+            )}
+            {/* nothing to plan against until the mission is published */}
+            {!isDraft && (
+              <Link className="button button-secondary" to={`/missions/${mission.id}/plan`}>
+                Plan
+              </Link>
+            )}
           </div>
         )}
       </div>
       {saveError && <p className="auth-error">{saveError}</p>}
-      <p className="text-dim mono">
-        {mission.status} / {mission.waypoints.length} waypoints
-      </p>
+      <p className="text-dim mono">{mission.status}</p>
+
+      <PlanSummary waypoints={mission.waypoints} />
+
       <div style={{ height: 400 }}>
         <MapView waypoints={mission.waypoints} onMapClick={() => {}} />
       </div>
+
+      {session?.role === 'admin' && (
+        <section className="mission-pilots">
+          <h2>Pilots</h2>
+          {assignedPilots.length === 0 ? (
+            <p className="text-dim">No pilots assigned yet.</p>
+          ) : (
+            <ul>
+              {assignedPilots.map((pilot) => (
+                <li key={pilot.id}>
+                  {pilot.name} <span className="text-dim mono">{pilot.email}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      )}
 
       {confirmingEdit && (
         <ConfirmDialog

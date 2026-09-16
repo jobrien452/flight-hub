@@ -1,6 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { listUsers } from '../api/users'
-import { useAuth } from '../auth/useAuth'
 import { MapView } from '../map/MapView'
 import { generateSurveyPlan } from '../planning/flightPlanGenerators'
 import {
@@ -12,7 +10,6 @@ import {
   type ToolOverlay,
 } from '../tools/MapTool'
 import type { Mission, PlanParams, Waypoint } from '../types/mission'
-import type { User } from '../types/user'
 import './MissionPlanEditor.css'
 
 type ToolId = 'waypoint' | 'rectangle_survey' | 'select'
@@ -46,12 +43,9 @@ export function MissionPlanEditor({
   onPublish,
   publishing = false,
 }: MissionPlanEditorProps) {
-  const { session } = useAuth()
-  const [pilots, setPilots] = useState<User[]>([])
   const [name, setName] = useState(mission?.name ?? '')
-  const [assignedPilotIds, setAssignedPilotIds] = useState<string[]>(
-    mission?.assigned_pilot_ids ?? [],
-  )
+  // carried through untouched, pilots are assigned from the plan page, not here
+  const assignedPilotIds = mission?.assigned_pilot_ids ?? []
   const [waypoints, setWaypoints] = useState<Waypoint[]>(mission?.waypoints ?? [])
   const [planParams, setPlanParams] = useState<PlanParams | null>(mission?.plan_params ?? null)
   const [activeToolId, setActiveToolId] = useState<ToolId>('waypoint')
@@ -77,12 +71,6 @@ export function MissionPlanEditor({
 
   const getSettings = useCallback(() => settingsRef.current, [])
   const getWaypoints = useCallback(() => waypointsRef.current, [])
-
-  useEffect(() => {
-    // pilots aren't assignable until the mission exists, no point fetching yet
-    if (!session || !mission) return
-    listUsers(session.token, 'pilot').then(setPilots).catch(() => setPilots([]))
-  }, [session, mission])
 
   // the getters below read refs, which reads as render-time ref access, but they
   // only ever run inside map events, which is the point: the tools are built
@@ -170,14 +158,6 @@ export function MissionPlanEditor({
     setSelectedIndex(null)
   }
 
-  function togglePilot(pilotId: string) {
-    setAssignedPilotIds((current) =>
-      current.includes(pilotId)
-        ? current.filter((id) => id !== pilotId)
-        : [...current, pilotId],
-    )
-  }
-
   function currentValue(): MissionPlanEditorValue {
     return { name, assignedPilotIds, waypoints, planParams }
   }
@@ -200,23 +180,6 @@ export function MissionPlanEditor({
             onChange={(e) => setName(e.target.value)}
           />
         </label>
-
-        {mission && (
-          <fieldset>
-            <legend>Pilots</legend>
-            {pilots.map((pilot) => (
-              <label key={pilot.id} className="pilot-row">
-                <input
-                  type="checkbox"
-                  checked={assignedPilotIds.includes(pilot.id)}
-                  onChange={() => togglePilot(pilot.id)}
-                />
-                {pilot.name}
-              </label>
-            ))}
-            {pilots.length === 0 && <p className="text-dim">No pilots yet.</p>}
-          </fieldset>
-        )}
 
         <fieldset>
           <legend>Tool</legend>

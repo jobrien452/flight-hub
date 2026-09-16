@@ -1,20 +1,22 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { deleteMission, listMissions } from '../api/missions'
+import { deleteMission, listMissions, publishMission } from '../api/missions'
 import { useAuth } from '../auth/useAuth'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import type { Mission } from '../types/mission'
 import './MissionsPage.css'
 
-type PendingAction = { mission: Mission; kind: 'edit' | 'delete' }
+type PendingAction = { mission: Mission; kind: 'edit' | 'delete' | 'published' }
 
 function RowMenu({
   mission,
   onEdit,
+  onPublish,
   onDelete,
 }: {
   mission: Mission
   onEdit: () => void
+  onPublish: () => void
   onDelete: () => void
 }) {
   const [open, setOpen] = useState(false)
@@ -63,9 +65,24 @@ function RowMenu({
           >
             Edit
           </button>
-          <Link role="menuitem" to={`/missions/${mission.id}/plan`}>
-            Plan
-          </Link>
+          {mission.status === 'draft' && (
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                setOpen(false)
+                onPublish()
+              }}
+            >
+              Publish
+            </button>
+          )}
+          {/* there is nothing to plan against until the mission is published */}
+          {mission.status !== 'draft' && (
+            <Link role="menuitem" to={`/missions/${mission.id}/plan`}>
+              Plan
+            </Link>
+          )}
           <button
             type="button"
             role="menuitem"
@@ -119,6 +136,18 @@ export function MissionsPage() {
     setPending({ mission, kind })
   }
 
+  async function handlePublish(mission: Mission) {
+    if (!session) return
+    setActionError(null)
+    try {
+      const published = await publishMission(mission.id, session.token)
+      setMissions((current) => (current ?? []).map((m) => (m.id === mission.id ? published : m)))
+      setPending({ mission: published, kind: 'published' })
+    } catch {
+      setError('Could not publish this mission')
+    }
+  }
+
   if (!session) return null
 
   const assigned = pending ? pending.mission.assigned_pilot_ids.length > 0 : false
@@ -164,6 +193,7 @@ export function MissionsPage() {
                     <RowMenu
                       mission={mission}
                       onEdit={() => startAction(mission, 'edit')}
+                      onPublish={() => handlePublish(mission)}
                       onDelete={() => startAction(mission, 'delete')}
                     />
                   </td>
@@ -184,6 +214,16 @@ export function MissionsPage() {
           }
           confirmLabel="Edit anyway"
           onConfirm={() => navigate(`/missions/${pending.mission.id}?edit=1`)}
+          onCancel={() => setPending(null)}
+        />
+      )}
+
+      {pending?.kind === 'published' && (
+        <ConfirmDialog
+          title="Mission published"
+          body="Ready to assign pilots to it now?"
+          confirmLabel="Assign pilots"
+          onConfirm={() => navigate(`/missions/${pending.mission.id}/plan`)}
           onCancel={() => setPending(null)}
         />
       )}

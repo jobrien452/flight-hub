@@ -75,25 +75,94 @@ describe('MissionDetailPage', () => {
     expect(screen.getByText(new RegExp(fixtureMission.status))).toBeInTheDocument()
   })
 
-  it('shows Edit and Plan actions for admins', async () => {
+  it('shows an Edit action for admins', async () => {
     renderPage(adminSession)
     expect(await screen.findByRole('button', { name: 'Edit' })).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Plan' })).toBeInTheDocument()
   })
 
-  it('hides both actions from pilots', async () => {
+  it('hides the admin actions from pilots', async () => {
     renderPage(pilotSession)
     await screen.findByRole('heading', { name: fixtureMission.name })
     expect(screen.queryByRole('button', { name: 'Edit' })).not.toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'Plan' })).not.toBeInTheDocument()
   })
 
-  it('points Plan at the assignment page', async () => {
+  it('shows the plan summary', async () => {
     renderPage(adminSession)
+    await screen.findByRole('heading', { name: fixtureMission.name })
+
+    expect(screen.getByText('Waypoints').closest('div')).toHaveTextContent('1')
+    expect(screen.getByText('Distance')).toBeInTheDocument()
+    expect(screen.getByText('Est. flight time')).toBeInTheDocument()
+    expect(screen.getByText('Altitude')).toBeInTheDocument()
+  })
+})
+
+describe('MissionDetailPage planning and publishing from the view', () => {
+  it('offers no Plan link while the mission is a draft', async () => {
+    renderPage(adminSession)
+    await screen.findByRole('heading', { name: fixtureMission.name })
+
+    expect(screen.queryByRole('link', { name: 'Plan' })).not.toBeInTheDocument()
+  })
+
+  it('offers Plan once the mission is published', async () => {
+    serveMission({ status: 'published' })
+    renderPage(adminSession)
+
     expect(await screen.findByRole('link', { name: 'Plan' })).toHaveAttribute(
       'href',
       `/missions/${fixtureMission.id}/plan`,
     )
+  })
+
+  it('offers Publish while the mission is a draft', async () => {
+    renderPage(adminSession)
+    expect(await screen.findByRole('button', { name: 'Publish' })).toBeEnabled()
+  })
+
+  it('greys out Publish for a draft with no waypoints', async () => {
+    serveMission({ waypoints: [] })
+    renderPage(adminSession)
+
+    expect(await screen.findByRole('button', { name: 'Publish' })).toBeDisabled()
+  })
+
+  it('offers no Publish once the mission is published', async () => {
+    serveMission({ status: 'published' })
+    renderPage(adminSession)
+    await screen.findByRole('heading', { name: fixtureMission.name })
+
+    expect(screen.queryByRole('button', { name: 'Publish' })).not.toBeInTheDocument()
+  })
+
+  it('publishes from the view and offers the assignment page', async () => {
+    renderPage(adminSession)
+    await userEvent.click(await screen.findByRole('button', { name: 'Publish' }))
+
+    expect(await screen.findByRole('dialog')).toHaveTextContent('assign pilots')
+    expect(await screen.findByRole('link', { name: 'Plan' })).toBeInTheDocument()
+  })
+})
+
+describe('MissionDetailPage assigned pilots', () => {
+  it('lists the pilots assigned to the mission', async () => {
+    renderPage(adminSession)
+    expect(await screen.findByText('Pete Pilot')).toBeInTheDocument()
+  })
+
+  it('leaves out pilots who are not assigned', async () => {
+    renderPage(adminSession)
+    await screen.findByText('Pete Pilot')
+
+    expect(screen.queryByText('Priya Pilot')).not.toBeInTheDocument()
+  })
+
+  it('says so when nobody is assigned', async () => {
+    serveMission({ assigned_pilot_ids: [] })
+    renderPage(adminSession)
+
+    expect(await screen.findByText('No pilots assigned yet.')).toBeInTheDocument()
   })
 })
 

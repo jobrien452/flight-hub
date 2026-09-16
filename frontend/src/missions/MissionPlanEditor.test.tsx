@@ -99,14 +99,10 @@ async function setAltitude(value: string) {
 const pilot = fixtureUsers.find((u) => u.role === 'pilot')!
 
 describe('MissionPlanEditor', () => {
-  it('shows pilots to assign when editing an existing mission', async () => {
+  it('has no pilot assignment in the toolbar, that lives on the plan page', async () => {
     renderEditor(vi.fn(), fixtureMission)
-    expect(await screen.findByText(pilot.name)).toBeInTheDocument()
-  })
+    await screen.findByPlaceholderText('New Mission')
 
-  it('hides pilot assignment when creating a new mission', async () => {
-    renderEditor()
-    await userEvent.click(screen.getByText('click A'))
     expect(screen.queryByText('Pilots')).not.toBeInTheDocument()
     expect(screen.queryByText(pilot.name)).not.toBeInTheDocument()
   })
@@ -191,9 +187,8 @@ describe('MissionPlanEditor', () => {
     )
   })
 
-  it('preserves assigned pilots by default when editing a mission', async () => {
+  it('carries the assigned pilots through untouched when editing a mission', async () => {
     const onSubmit = renderEditor(vi.fn(), fixtureMission)
-    await screen.findByText(pilot.name)
     await userEvent.click(screen.getByRole('button', { name: 'Create' }))
 
     expect(onSubmit).toHaveBeenCalledWith(
