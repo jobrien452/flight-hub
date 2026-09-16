@@ -5,7 +5,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.deps import CurrentUser, get_current_user
 from app.mission_access import get_owned_mission
-from app.models.mission_report import MissionReport
+from app.models.mission import Mission, MissionStatus
+from app.models.mission_report import MissionReport, MissionReportStatus
 from app.models.user import Role
 from app.schemas.mission_report import MissionReportCreate, MissionReportOut, MissionReportUpdate
 
@@ -14,6 +15,26 @@ router = APIRouter(prefix="/missions", tags=["mission-reports"])
 
 def _out(report: MissionReport) -> MissionReportOut:
     return MissionReportOut(**report.model_dump(exclude={"id"}), id=str(report.id))
+
+
+async def _complete_if_everyone_reported(mission_id: str) -> None:
+    # a mission is done once every assigned pilot has filed, one pilot finishing
+    # early doesn't finish the job for the rest
+    mission = await Mission.get(PydanticObjectId(mission_id))
+    if mission is None or mission.status != MissionStatus.PUBLISHED:
+        return
+
+    submitted = await MissionReport.find(
+        MissionReport.mission_id == mission_id,
+        MissionReport.status == MissionReportStatus.SUBMITTED,
+    ).to_list()
+    reported = {r.pilot_id for r in submitted}
+    if not set(mission.assigned_pilot_ids).issubset(reported):
+        return
+
+    mission.status = MissionStatus.COMPLETED
+    mission.updated_at = datetime.now(timezone.utc)
+    await mission.save()
 
 
 async def _get_own_report(mission_id: str, report_id: str, current_user: CurrentUser) -> MissionReport:
@@ -76,5 +97,10 @@ async def update_report(
     for field, value in updates.items():
         setattr(report, field, value)
     report.updated_at = datetime.now(timezone.utc)
+    if report.status == MissionReportStatus.SUBMITTED and report.submitted_at is None:
+        report.submitted_at = report.updated_at
     await report.save()
+
+    if report.status == MissionReportStatus.SUBMITTED:
+        await _complete_if_everyone_reported(mission_id)
     return _out(report)

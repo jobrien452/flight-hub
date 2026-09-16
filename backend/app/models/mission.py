@@ -7,9 +7,10 @@ from pydantic import BaseModel, Field
 
 
 class MissionStatus(str, Enum):
+    # draft --publish--> published --every pilot reports in--> completed
     DRAFT = "draft"
-    PLANNED = "planned"
-    COMPLETE = "complete"
+    PUBLISHED = "published"
+    COMPLETED = "completed"
 
 
 class Waypoint(BaseModel):

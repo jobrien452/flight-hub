@@ -28,6 +28,32 @@ def send_invite_email(to_email: str, token: str) -> None:
     )
 
 
+def _with_note(body: str, message: str | None) -> str:
+    return f"{body}\n\nFrom your admin:\n{message}\n" if message else body
+
+
+def send_mission_assigned_email(
+    to_email: str, mission_name: str, mission_id: str, message: str | None
+) -> None:
+    link = f"{settings.public_base_url}/missions/{mission_id}"
+    _send(
+        to_email,
+        f"You've been assigned to {mission_name}",
+        _with_note(f"You're flying {mission_name}. The plan is here:\n{link}", message),
+    )
+
+
+def send_mission_unassigned_email(
+    to_email: str, mission_name: str, mission_id: str, message: str | None
+) -> None:
+    link = f"{settings.public_base_url}/missions/{mission_id}"
+    _send(
+        to_email,
+        f"You've been taken off {mission_name}",
+        _with_note(f"You're no longer assigned to {mission_name}:\n{link}", message),
+    )
+
+
 def send_password_reset_email(to_email: str, token: str) -> None:
     link = f"{settings.public_base_url}/reset-password?token={token}"
     _send(

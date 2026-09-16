@@ -63,27 +63,27 @@ async def test_pilot_cannot_create_mission(client, pilot_headers):
 async def test_admin_can_update_mission(client, admin_headers, assigned_mission: Mission):
     resp = await client.patch(
         f"/missions/{assigned_mission.id}",
-        json={"status": "planned"},
+        json={"name": "Survey Site A (revised)"},
         headers=admin_headers,
     )
     assert resp.status_code == 200
-    assert resp.json()["status"] == "planned"
+    assert resp.json()["name"] == "Survey Site A (revised)"
 
 
 async def test_pilot_cannot_update_mission(client, pilot_headers, assigned_mission: Mission):
     resp = await client.patch(
         f"/missions/{assigned_mission.id}",
-        json={"status": "planned"},
+        json={"name": "Nope"},
         headers=pilot_headers,
     )
     assert resp.status_code == 403
 
 
-async def test_admin_can_delete_mission(client, admin_headers, assigned_mission: Mission):
-    resp = await client.delete(f"/missions/{assigned_mission.id}", headers=admin_headers)
+async def test_admin_can_delete_mission(client, admin_headers, unassigned_mission: Mission):
+    resp = await client.delete(f"/missions/{unassigned_mission.id}", headers=admin_headers)
     assert resp.status_code == 204
 
-    follow_up = await client.get(f"/missions/{assigned_mission.id}", headers=admin_headers)
+    follow_up = await client.get(f"/missions/{unassigned_mission.id}", headers=admin_headers)
     assert follow_up.status_code == 404
 
 
