@@ -24,6 +24,7 @@ interface MockMapProps {
   interactiveLayerIds?: string[]
   mapStyle: string
   cursor?: string
+  initialViewState: { longitude: number; latitude: number }
   children: ReactNode
 }
 
@@ -66,6 +67,7 @@ vi.mock('react-map-gl/mapbox', () => ({
     interactiveLayerIds,
     mapStyle,
     cursor,
+    initialViewState,
     children,
   }: MockMapProps) => (
     <div
@@ -73,6 +75,7 @@ vi.mock('react-map-gl/mapbox', () => ({
       data-interactive={(interactiveLayerIds ?? []).join(',')}
       data-style={mapStyle}
       data-cursor={cursor ?? ''}
+      data-centre={`${initialViewState.longitude},${initialViewState.latitude}`}
     >
       <div data-testid="mock-map" onClick={() => onClick({ lngLat: { lng: 10, lat: 20 } })}>
         {children}
@@ -144,6 +147,30 @@ describe('MapView', () => {
     fireEvent.click(screen.getByTestId('mock-map'))
 
     expect(onMapClick).toHaveBeenCalledWith({ lng: 10, lat: 20 })
+  })
+
+  it('opens on the middle waypoint rather than the corner the plan starts at', () => {
+    render(
+      <MapView
+        waypoints={[
+          { lat: 1, lng: 1 },
+          { lat: 2, lng: 2 },
+          { lat: 3, lng: 3 },
+        ]}
+        onMapClick={() => {}}
+      />,
+    )
+
+    expect(screen.getByTestId('mock-map-root')).toHaveAttribute('data-centre', '2,2')
+  })
+
+  it('falls back to a default view for an empty plan', () => {
+    render(<MapView waypoints={[]} onMapClick={() => {}} />)
+
+    expect(screen.getByTestId('mock-map-root')).toHaveAttribute(
+      'data-centre',
+      '-122.4194,37.7749',
+    )
   })
 
   it('puts a scale bar in the bottom left', () => {

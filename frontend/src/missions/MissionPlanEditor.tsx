@@ -46,7 +46,7 @@ export function MissionPlanEditor({
   const assignedPilotIds = mission?.assigned_pilot_ids ?? []
   const [waypoints, setWaypoints] = useState<Waypoint[]>(mission?.waypoints ?? [])
   const [planParams, setPlanParams] = useState<PlanParams | null>(mission?.plan_params ?? null)
-  const [activeToolId, setActiveToolId] = useState<ToolId>('waypoint')
+  const [activeToolId, setActiveToolId] = useState<ToolId>('select')
   const [altitude, setAltitude] = useState(50)
   const [spacing, setSpacing] = useState(20)
   const [surveyGenerated, setSurveyGenerated] = useState(false)

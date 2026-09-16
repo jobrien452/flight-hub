@@ -57,6 +57,12 @@ function airborne(waypoints: Waypoint[]): { w: Waypoint; index: number }[] {
     .filter(({ w }) => altitudeOf(w) > 0)
 }
 
+// what the map should open on. the first waypoint sits at a corner of a survey,
+// which frames the plan badly, so the middle of the run is a fairer view
+export function middleWaypoint(waypoints: Waypoint[]): Waypoint | undefined {
+  return waypoints[Math.floor(waypoints.length / 2)]
+}
+
 export function toFlightPath(waypoints: Waypoint[], ground: number[] = []): Position3D[] {
   if (waypoints.length < 2) return []
   return waypoints.map((w, index) => [w.lng, w.lat, groundAt(ground, index) + altitudeOf(w)])

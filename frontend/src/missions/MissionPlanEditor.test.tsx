@@ -90,6 +90,11 @@ async function placeBox() {
   }
 }
 
+// select is the tool on load, so placing anything means picking a tool first
+async function activateWaypointTool() {
+  await userEvent.click(screen.getByRole('button', { name: 'Waypoint' }))
+}
+
 async function setAltitude(value: string) {
   const input = screen.getByLabelText('Altitude (m)')
   await userEvent.clear(input)
@@ -112,10 +117,22 @@ describe('MissionPlanEditor', () => {
     expect(screen.getByPlaceholderText('New Mission')).toBeInTheDocument()
   })
 
+  it('starts on the select tool', () => {
+    renderEditor()
+    expect(screen.getByRole('button', { name: 'Select' })).toHaveClass('active')
+  })
+
   it('adds a waypoint when the map is clicked with the waypoint tool active', async () => {
     renderEditor()
+    await activateWaypointTool()
     await userEvent.click(screen.getByText('click A'))
     expect(await screen.findByText('1 waypoints')).toBeInTheDocument()
+  })
+
+  it('does not drop a waypoint when the map is clicked on the select tool', async () => {
+    renderEditor()
+    await userEvent.click(screen.getByText('click A'))
+    expect(screen.getByText('0 waypoints')).toBeInTheDocument()
   })
 
   it('places a snapped box from 4 corner clicks without generating the sweep yet', async () => {
@@ -200,6 +217,7 @@ describe('MissionPlanEditor', () => {
   it('submits the current name and waypoints when creating a mission', async () => {
     const onSubmit = renderEditor()
     await userEvent.type(screen.getByLabelText('Name'), 'Test Mission')
+    await activateWaypointTool()
     await userEvent.click(screen.getByText('click A'))
     await userEvent.click(screen.getByRole('button', { name: 'Create' }))
 
@@ -227,6 +245,7 @@ describe('MissionPlanEditor', () => {
 describe('MissionPlanEditor waypoint altitude', () => {
   it('keeps waypoints already placed when the altitude changes', async () => {
     renderEditor()
+    await activateWaypointTool()
     await userEvent.click(screen.getByText('click A'))
     await setAltitude('120')
 
@@ -235,6 +254,7 @@ describe('MissionPlanEditor waypoint altitude', () => {
 
   it('gives each waypoint the altitude that was set when it was placed', async () => {
     const onSubmit = renderEditor()
+    await activateWaypointTool()
     await userEvent.click(screen.getByText('click A'))
     await setAltitude('120')
     await userEvent.click(screen.getByText('click B'))
@@ -249,6 +269,7 @@ describe('MissionPlanEditor waypoint altitude', () => {
 
 describe('MissionPlanEditor select tool', () => {
   async function placeTwoAndSelect(which: 'grab first' | 'grab second') {
+    await activateWaypointTool()
     await userEvent.click(screen.getByText('click A'))
     await setAltitude('120')
     await userEvent.click(screen.getByText('click B'))
@@ -411,4 +432,5 @@ describe('MissionPlanEditor publishing', () => {
     )
   })
 })
+
 

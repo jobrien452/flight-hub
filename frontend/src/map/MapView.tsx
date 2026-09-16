@@ -4,6 +4,7 @@ import type { MapMouseEvent, MapRef } from 'react-map-gl/mapbox'
 import type { Map as MapboxMap } from 'mapbox-gl'
 import { AddressSearch } from './AddressSearch'
 import { FlightOverlay, type WaypointPicker } from './FlightOverlay'
+import { middleWaypoint } from './flightGeometry'
 import { MapStyleControl } from './MapStyleControl'
 import { MAP_STYLES, useMapStyle } from './mapStyles'
 import { projectPosition, type ScreenPoint } from './projectAltitude'
@@ -130,7 +131,7 @@ export function MapView({
     )
   }
 
-  const first = waypoints[0]
+  const focus = middleWaypoint(waypoints)
 
   function handleClick(event: MapMouseEvent) {
     if (swallowClickRef.current) {
@@ -211,9 +212,9 @@ export function MapView({
         ref={mapRef}
         mapboxAccessToken={MAPBOX_TOKEN}
         initialViewState={{
-          longitude: first?.lng ?? -122.4194,
-          latitude: first?.lat ?? 37.7749,
-          zoom: first ? 15 : 10,
+          longitude: focus?.lng ?? -122.4194,
+          latitude: focus?.lat ?? 37.7749,
+          zoom: focus ? 15 : 10,
           pitch: DEFAULT_PITCH,
         }}
         mapStyle={MAP_STYLES[styleId].url}

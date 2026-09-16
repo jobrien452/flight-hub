@@ -1,6 +1,12 @@
 ﻿import { describe, expect, it } from 'vitest'
 import type { Waypoint } from '../types/mission'
-import { toDropLines, toElevatedPoints, toFlightPath, toGroundPips } from './flightGeometry'
+import {
+  middleWaypoint,
+  toDropLines,
+  toElevatedPoints,
+  toFlightPath,
+  toGroundPips,
+} from './flightGeometry'
 
 const plan: Waypoint[] = [
   { lat: 1, lng: 2, alt: 40 },
@@ -94,6 +100,33 @@ describe('altitude above ground', () => {
       { position: [2, 1, 40], index: 0 },
       { position: [4, 3, 60], index: 1 },
     ])
+  })
+})
+
+describe('middleWaypoint', () => {
+  function run(count: number) {
+    const points = Array.from({ length: count }, (_, i) => ({ lat: i, lng: i }))
+    return middleWaypoint(points)
+  }
+
+  it('has nothing to focus on for an empty plan', () => {
+    expect(middleWaypoint([])).toBeUndefined()
+  })
+
+  it('picks the only waypoint there is', () => {
+    expect(run(1)).toEqual({ lat: 0, lng: 0 })
+  })
+
+  it('picks the middle of an odd run', () => {
+    expect(run(5)).toEqual({ lat: 2, lng: 2 })
+  })
+
+  it('picks just past centre on an even run', () => {
+    expect(run(4)).toEqual({ lat: 2, lng: 2 })
+  })
+
+  it('never picks the first waypoint of a long plan, which sits at a corner', () => {
+    expect(run(20)).not.toEqual({ lat: 0, lng: 0 })
   })
 })
 
