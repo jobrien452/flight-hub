@@ -1,11 +1,12 @@
-import { useCallback, useRef, useState, type ReactNode } from 'react'
-import Map, { Layer, Popup, ScaleControl, Source } from 'react-map-gl/mapbox'
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
+import Map, { Layer, ScaleControl, Source } from 'react-map-gl/mapbox'
 import type { MapMouseEvent, MapRef } from 'react-map-gl/mapbox'
 import type { Map as MapboxMap } from 'mapbox-gl'
 import { AddressSearch } from './AddressSearch'
 import { FlightOverlay, type WaypointPicker } from './FlightOverlay'
 import { MapStyleControl } from './MapStyleControl'
 import { MAP_STYLES, useMapStyle } from './mapStyles'
+import { projectPosition, type ScreenPoint } from './projectAltitude'
 import { applyTerrain } from './terrain'
 import type { LngLat, ToolOverlay } from '../tools/MapTool'
 import type { Waypoint } from '../types/mission'
@@ -76,10 +77,44 @@ export function MapView({
   const [hoveringHandle, setHoveringHandle] = useState(false)
   const [dragging, setDragging] = useState(false)
   const [styleId, setStyleId] = useMapStyle()
+  const [infoboxPoint, setInfoboxPoint] = useState<ScreenPoint | null>(null)
   const pickWaypoint = useRef<WaypointPicker | null>(null)
   const handlePickerReady = useCallback((pick: WaypointPicker | null) => {
     pickWaypoint.current = pick
   }, [])
+
+  // the infobox belongs at the waypoint's altitude, not on the ground under it,
+  // so its screen position is worked out from the camera on every move
+  const positionInfobox = useCallback(() => {
+    const map = mapRef.current?.getMap()
+    if (!map || !infoboxAt) {
+      setInfoboxPoint(null)
+      return
+    }
+
+    const container = map.getContainer()
+    const ground =
+      map.queryTerrainElevation({ lng: infoboxAt.lng, lat: infoboxAt.lat }, { exaggerated: true }) ??
+      0
+    const centre = map.getCenter()
+
+    setInfoboxPoint(
+      projectPosition(
+        {
+          width: container.clientWidth,
+          height: container.clientHeight,
+          longitude: centre.lng,
+          latitude: centre.lat,
+          zoom: map.getZoom(),
+          pitch: map.getPitch(),
+          bearing: map.getBearing(),
+        },
+        [infoboxAt.lng, infoboxAt.lat, ground + (infoboxAt.alt ?? 0)],
+      ),
+    )
+  }, [infoboxAt])
+
+  useEffect(positionInfobox, [positionInfobox])
 
 
   if (!MAPBOX_TOKEN) {
@@ -164,6 +199,8 @@ export function MapView({
         onMouseUp={handleMouseUp}
         onMouseEnter={() => setHoveringHandle(true)}
         onMouseLeave={() => setHoveringHandle(false)}
+        onMove={positionInfobox}
+        onIdle={positionInfobox}
       >
         {overlay && (overlay.markers.length > 0 || overlay.ghost) && (
           <Source id="tool-overlay" type="geojson" data={toOverlayCollection(overlay)}>
@@ -193,18 +230,6 @@ export function MapView({
             />
           </Source>
         )}
-        {infoboxAt && (
-          <Popup
-            longitude={infoboxAt.lng}
-            latitude={infoboxAt.lat}
-            anchor="bottom"
-            offset={14}
-            closeButton={false}
-            closeOnClick={false}
-          >
-            {infobox}
-          </Popup>
-        )}
         <ScaleControl position="bottom-left" unit="metric" />
         <FlightOverlay
           waypoints={waypoints}
@@ -213,6 +238,14 @@ export function MapView({
           onPickerReady={handlePickerReady}
         />
       </Map>
+      {infoboxAt && (
+        <div
+          className="map-infobox"
+          style={{ left: infoboxPoint?.x ?? 0, top: infoboxPoint?.y ?? 0 }}
+        >
+          {infobox}
+        </div>
+      )}
       <MapStyleControl value={styleId} onChange={setStyleId} />
     </div>
   )

@@ -1,0 +1,72 @@
+.waypoint-drawer {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  overflow-y: auto;
+}
+
+.waypoint-drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.waypoint-drawer-header h2 {
+  font-size: 14px;
+}
+
+.waypoint-drawer-header button {
+  background: none;
+  border: none;
+  font-size: 18px;
+  line-height: 1;
+  color: var(--text-dim);
+  cursor: pointer;
+  padding: 0 4px;
+}
+
+.waypoint-drawer-header button:hover {
+  color: var(--text);
+}
+
+.waypoint-drawer label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.waypoint-drawer input {
+  font: inherit;
+  font-size: 13px;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 6px 8px;
+}
+
+.waypoint-drawer input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.waypoint-drawer-delete {
+  margin-top: auto;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 7px;
+  font-size: 12px;
+  color: var(--danger);
+  cursor: pointer;
+}
+
+.waypoint-drawer-delete:hover {
+  border-color: var(--danger);
+}

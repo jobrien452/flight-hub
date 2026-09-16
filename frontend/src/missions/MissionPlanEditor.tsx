@@ -10,6 +10,7 @@ import {
   type ToolOverlay,
 } from '../tools/MapTool'
 import type { Mission, PlanParams, Waypoint } from '../types/mission'
+import { WaypointDrawer } from './WaypointDrawer'
 import './MissionPlanEditor.css'
 
 type ToolId = 'waypoint' | 'rectangle_survey' | 'select'
@@ -51,6 +52,7 @@ export function MissionPlanEditor({
   const [surveyGenerated, setSurveyGenerated] = useState(false)
   const [overlay, setOverlay] = useState<ToolOverlay>({ markers: [] })
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
+  const [drawerOpen, setDrawerOpen] = useState(false)
 
   // tools are built once and read these through the refs, so changing the
   // altitude doesn't rebuild them and wipe out what's already been placed
@@ -126,6 +128,7 @@ export function MissionPlanEditor({
     tools[id].onActivate()
     setActiveToolId(id)
     setSelectedIndex(null)
+    setDrawerOpen(false)
     setOverlay(tools[id].renderOverlay())
   }
 
@@ -139,15 +142,18 @@ export function MissionPlanEditor({
     setSurveyGenerated(true)
   }
 
-  function handleWaypointAltitude(alt: number) {
+  function handleWaypointChange(changes: Partial<Waypoint>) {
     if (selectedIndex === null) return
-    setWaypoints((current) => current.map((w, i) => (i === selectedIndex ? { ...w, alt } : w)))
+    setWaypoints((current) =>
+      current.map((w, i) => (i === selectedIndex ? { ...w, ...changes } : w)),
+    )
   }
 
   function handleWaypointDelete() {
     if (selectedIndex === null) return
     setWaypoints((current) => current.filter((_, i) => i !== selectedIndex))
     setSelectedIndex(null)
+    setDrawerOpen(false)
   }
 
   function currentValue(): MissionPlanEditorValue {
@@ -162,7 +168,7 @@ export function MissionPlanEditor({
   const liveOverlay = activeToolId === 'select' ? activeTool.renderOverlay() : overlay
 
   return (
-    <div className="plan-editor">
+    <div className={drawerOpen && selectedWaypoint ? 'plan-editor with-drawer' : 'plan-editor'}>
       <aside className="plan-editor-panel">
         <label>
           Name
@@ -178,6 +184,13 @@ export function MissionPlanEditor({
           <div className="tool-row">
             <button
               type="button"
+              className={activeToolId === 'select' ? 'active' : ''}
+              onClick={() => handleToolSelect('select')}
+            >
+              Select
+            </button>
+            <button
+              type="button"
               className={activeToolId === 'waypoint' ? 'active' : ''}
               onClick={() => handleToolSelect('waypoint')}
             >
@@ -189,13 +202,6 @@ export function MissionPlanEditor({
               onClick={() => handleToolSelect('rectangle_survey')}
             >
               Rectangle Survey
-            </button>
-            <button
-              type="button"
-              className={activeToolId === 'select' ? 'active' : ''}
-              onClick={() => handleToolSelect('select')}
-            >
-              Select
             </button>
           </div>
           {activeToolId !== 'select' && (
@@ -275,9 +281,12 @@ export function MissionPlanEditor({
                   <input
                     type="number"
                     value={selectedWaypoint.alt ?? 0}
-                    onChange={(e) => handleWaypointAltitude(Number(e.target.value))}
+                    onChange={(e) => handleWaypointChange({ alt: Number(e.target.value) })}
                   />
                 </label>
+                <button type="button" onClick={() => setDrawerOpen(true)}>
+                  Edit details
+                </button>
                 <button type="button" onClick={handleWaypointDelete}>
                   Delete waypoint
                 </button>
@@ -286,6 +295,16 @@ export function MissionPlanEditor({
           }
         />
       </div>
+
+      {drawerOpen && selectedWaypoint && selectedIndex !== null && (
+        <WaypointDrawer
+          waypoint={selectedWaypoint}
+          index={selectedIndex}
+          onChange={handleWaypointChange}
+          onDelete={handleWaypointDelete}
+          onClose={() => setDrawerOpen(false)}
+        />
+      )}
     </div>
   )
 }

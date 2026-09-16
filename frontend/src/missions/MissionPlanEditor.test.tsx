@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+﻿import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -307,6 +307,65 @@ describe('MissionPlanEditor select tool', () => {
     expect(onSubmit.mock.calls[0][0].waypoints).toEqual([{ lat: 20, lng: 10.002, alt: 120 }])
   })
 
+  it('opens a details drawer for the selected waypoint', async () => {
+    renderEditor()
+    await placeTwoAndSelect('grab second')
+    await userEvent.click(screen.getByRole('button', { name: 'Edit details' }))
+
+    const drawer = screen.getByRole('complementary', { name: 'Waypoint 2 details' })
+    expect(within(drawer).getByLabelText('Latitude')).toHaveValue(20)
+    expect(within(drawer).getByLabelText('Altitude (m)')).toHaveValue(120)
+  })
+
+  it('has no drawer until it is asked for', async () => {
+    renderEditor()
+    await placeTwoAndSelect('grab second')
+
+    expect(screen.queryByRole('complementary', { name: /details/ })).not.toBeInTheDocument()
+  })
+
+  it('edits the deeper fields from the drawer', async () => {
+    const onSubmit = renderEditor()
+    await placeTwoAndSelect('grab second')
+    await userEvent.click(screen.getByRole('button', { name: 'Edit details' }))
+
+    const drawer = screen.getByRole('complementary', { name: 'Waypoint 2 details' })
+    await userEvent.type(within(drawer).getByLabelText('Heading (deg)'), '90')
+    await userEvent.type(within(drawer).getByLabelText('Speed (m/s)'), '4')
+    await userEvent.click(screen.getByRole('button', { name: 'Create' }))
+
+    expect(onSubmit.mock.calls[0][0].waypoints[1]).toMatchObject({ heading: 90, speed: 4 })
+  })
+
+  it('closes the drawer', async () => {
+    renderEditor()
+    await placeTwoAndSelect('grab second')
+    await userEvent.click(screen.getByRole('button', { name: 'Edit details' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Close waypoint details' }))
+
+    expect(screen.queryByRole('complementary', { name: /details/ })).not.toBeInTheDocument()
+  })
+
+  it('closes the drawer when the waypoint is deleted from it', async () => {
+    renderEditor()
+    await placeTwoAndSelect('grab second')
+    await userEvent.click(screen.getByRole('button', { name: 'Edit details' }))
+
+    const drawer = screen.getByRole('complementary', { name: 'Waypoint 2 details' })
+    await userEvent.click(within(drawer).getByRole('button', { name: 'Delete waypoint' }))
+
+    expect(screen.queryByRole('complementary', { name: /details/ })).not.toBeInTheDocument()
+  })
+
+  it('closes the drawer when the tool changes', async () => {
+    renderEditor()
+    await placeTwoAndSelect('grab second')
+    await userEvent.click(screen.getByRole('button', { name: 'Edit details' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Waypoint' }))
+
+    expect(screen.queryByRole('complementary', { name: /details/ })).not.toBeInTheDocument()
+  })
+
   it('closes the infobox once the waypoint is gone', async () => {
     renderEditor()
     await placeTwoAndSelect('grab first')
@@ -352,3 +411,4 @@ describe('MissionPlanEditor publishing', () => {
     )
   })
 })
+

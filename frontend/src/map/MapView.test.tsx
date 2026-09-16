@@ -117,9 +117,6 @@ vi.mock('react-map-gl/mapbox', () => ({
     </div>
   ),
   Layer: () => null,
-  Popup: ({ children }: { children: ReactNode }) => (
-    <div data-testid="mock-popup">{children}</div>
-  ),
   ScaleControl: ({ position }: { position: string }) => (
     <div data-testid="mock-scale" data-position={position} />
   ),
@@ -435,7 +432,7 @@ describe('MapView dragging waypoints at altitude', () => {
 
 describe('MapView infobox', () => {
   it('renders the infobox anchored at a waypoint', () => {
-    render(
+    const { container } = render(
       <MapView
         waypoints={[{ lat: 1, lng: 2 }]}
         onMapClick={() => {}}
@@ -444,12 +441,13 @@ describe('MapView infobox', () => {
       />,
     )
 
-    expect(screen.getByTestId('mock-popup')).toHaveTextContent('Waypoint 1')
+    // positioned by hand rather than by a mapbox popup, which cannot carry altitude
+    expect(container.querySelector('.map-infobox')).toHaveTextContent('Waypoint 1')
   })
 
   it('renders no infobox when nothing is anchored', () => {
-    render(<MapView waypoints={[{ lat: 1, lng: 2 }]} onMapClick={() => {}} />)
+    const { container } = render(<MapView waypoints={[{ lat: 1, lng: 2 }]} onMapClick={() => {}} />)
 
-    expect(screen.queryByTestId('mock-popup')).not.toBeInTheDocument()
+    expect(container.querySelector('.map-infobox')).not.toBeInTheDocument()
   })
 })

@@ -3,6 +3,19 @@
   height: 100%;
 }
 
+/* positioned by hand at the waypoint's altitude, see MapView.positionInfobox */
+.map-infobox {
+  position: absolute;
+  z-index: 2;
+  transform: translate(-50%, calc(-100% - 14px));
+  pointer-events: auto;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 10px;
+  color: var(--text);
+}
+
 .map-missing-token {
   height: 100%;
   min-height: 300px;
