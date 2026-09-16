@@ -1,5 +1,7 @@
+import { useRef } from 'react'
 import Map, { Layer, Source } from 'react-map-gl/mapbox'
-import type { MapMouseEvent } from 'react-map-gl/mapbox'
+import type { MapMouseEvent, MapRef } from 'react-map-gl/mapbox'
+import { AddressSearch } from './AddressSearch'
 import type { LngLat } from '../tools/MapTool'
 import type { Waypoint } from '../types/mission'
 import 'mapbox-gl/dist/mapbox-gl.css'
@@ -38,6 +40,8 @@ interface MapViewProps {
 }
 
 export function MapView({ waypoints, onMapClick }: MapViewProps) {
+  const mapRef = useRef<MapRef>(null)
+
   if (!MAPBOX_TOKEN) {
     return (
       <div className="map-missing-token">
@@ -52,31 +56,39 @@ export function MapView({ waypoints, onMapClick }: MapViewProps) {
     onMapClick({ lng: event.lngLat.lng, lat: event.lngLat.lat })
   }
 
+  function handleAddressSelect(lng: number, lat: number) {
+    mapRef.current?.flyTo({ center: [lng, lat], zoom: 15 })
+  }
+
   return (
-    <Map
-      mapboxAccessToken={MAPBOX_TOKEN}
-      initialViewState={{
-        longitude: first?.lng ?? -122.4194,
-        latitude: first?.lat ?? 37.7749,
-        zoom: first ? 15 : 10,
-      }}
-      mapStyle="mapbox://styles/mapbox/dark-v11"
-      onClick={handleClick}
-    >
-      <Source id="flight-plan" type="geojson" data={toFeatureCollection(waypoints)}>
-        <Layer
-          id="flight-path"
-          type="line"
-          filter={['==', ['geometry-type'], 'LineString']}
-          paint={{ 'line-color': ACCENT, 'line-width': 2 }}
-        />
-        <Layer
-          id="flight-waypoints"
-          type="circle"
-          filter={['==', ['geometry-type'], 'Point']}
-          paint={{ 'circle-color': ACCENT, 'circle-radius': 5 }}
-        />
-      </Source>
-    </Map>
+    <div className="map-container">
+      <AddressSearch mapboxToken={MAPBOX_TOKEN} onSelect={handleAddressSelect} />
+      <Map
+        ref={mapRef}
+        mapboxAccessToken={MAPBOX_TOKEN}
+        initialViewState={{
+          longitude: first?.lng ?? -122.4194,
+          latitude: first?.lat ?? 37.7749,
+          zoom: first ? 15 : 10,
+        }}
+        mapStyle="mapbox://styles/mapbox/dark-v11"
+        onClick={handleClick}
+      >
+        <Source id="flight-plan" type="geojson" data={toFeatureCollection(waypoints)}>
+          <Layer
+            id="flight-path"
+            type="line"
+            filter={['==', ['geometry-type'], 'LineString']}
+            paint={{ 'line-color': ACCENT, 'line-width': 2 }}
+          />
+          <Layer
+            id="flight-waypoints"
+            type="circle"
+            filter={['==', ['geometry-type'], 'Point']}
+            paint={{ 'circle-color': ACCENT, 'circle-radius': 5 }}
+          />
+        </Source>
+      </Map>
+    </div>
   )
 }
