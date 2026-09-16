@@ -9,13 +9,17 @@ export const MAP_STYLES: Record<MapStyleId, { label: string; url: string }> = {
 
 const STORAGE_KEY = 'flyby.mapStyle'
 
+// satellite by default, imagery shows the lie of the land far better than the
+// flat dark style does
+const DEFAULT_STYLE: MapStyleId = 'satellite'
+
 export function readStoredStyle(): MapStyleId {
   try {
     const stored = localStorage.getItem(STORAGE_KEY)
-    return stored === 'satellite' || stored === 'dark' ? stored : 'dark'
+    return stored === 'satellite' || stored === 'dark' ? stored : DEFAULT_STYLE
   } catch {
     // private windows and blocked site data both throw here
-    return 'dark'
+    return DEFAULT_STYLE
   }
 }
 

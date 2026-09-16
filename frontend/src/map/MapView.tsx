@@ -1,6 +1,7 @@
 import { useRef, useState, type ReactNode } from 'react'
 import Map, { Layer, Popup, Source } from 'react-map-gl/mapbox'
 import type { MapMouseEvent, MapRef } from 'react-map-gl/mapbox'
+import type { Map as MapboxMap } from 'mapbox-gl'
 import { AddressSearch } from './AddressSearch'
 import { FlightOverlay } from './FlightOverlay'
 import { MapStyleControl } from './MapStyleControl'
@@ -74,6 +75,7 @@ export function MapView({
   const [dragging, setDragging] = useState(false)
   const [styleId, setStyleId] = useMapStyle()
 
+
   if (!MAPBOX_TOKEN) {
     return (
       <div className="map-missing-token">
@@ -116,12 +118,13 @@ export function MapView({
     onHandleDragEnd?.()
   }
 
-  // terrain needs its dem source to exist first, and a style swap drops both,
-  // so this runs on every style load rather than once at startup
-  function handleStyleLoad() {
-    const map = mapRef.current?.getMap()
-    if (!map?.isStyleLoaded()) return
+  // terrain needs its dem source to exist first, and swapping the style throws
+  // both away. style.load covers every swap after this one. deliberately not
+  // styledata, which fires on each style edit and would re-trigger itself
+  function handleMapLoad(event: { target: MapboxMap }) {
+    const map = event.target
     applyTerrain(map)
+    map.on('style.load', () => applyTerrain(map))
   }
 
   function handleAddressSelect(lng: number, lat: number) {
@@ -141,8 +144,7 @@ export function MapView({
           pitch: DEFAULT_PITCH,
         }}
         mapStyle={MAP_STYLES[styleId].url}
-        onLoad={handleStyleLoad}
-        onStyleData={handleStyleLoad}
+        onLoad={handleMapLoad}
         cursor={dragging ? 'grabbing' : hoveringHandle ? 'grab' : undefined}
         interactiveLayerIds={overlay?.draggable ? ['overlay-corners'] : undefined}
         onClick={handleClick}

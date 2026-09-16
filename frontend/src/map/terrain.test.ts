@@ -1,18 +1,30 @@
 import { describe, expect, it, vi } from 'vitest'
-import { applyTerrain, TERRAIN_SOURCE, type TerrainCapableMap } from './terrain'
+import {
+  applyTerrain,
+  HILLSHADE_LAYER,
+  SKY_LAYER,
+  TERRAIN_SOURCE,
+  type TerrainCapableMap,
+} from './terrain'
 
-function fakeMap(existingSources: string[] = []) {
-  const sources = new Set(existingSources)
+function fakeMap(existing: string[] = []) {
+  const present = new Set(existing)
   const addSource = vi.fn((id: string) => {
-    sources.add(id)
+    present.add(id)
+  })
+  const addLayer = vi.fn((layer: { id: string }) => {
+    present.add(layer.id)
   })
   const setTerrain = vi.fn()
-  const map: TerrainCapableMap = {
-    getSource: (id: string) => (sources.has(id) ? {} : undefined),
+  // mapbox's own signatures are far wider than what applyTerrain touches
+  const map = {
+    getSource: (id: string) => (present.has(id) ? {} : undefined),
     addSource,
+    getLayer: (id: string) => (present.has(id) ? {} : undefined),
+    addLayer,
     setTerrain,
-  }
-  return { map, addSource, setTerrain }
+  } as unknown as TerrainCapableMap
+  return { map, addSource, addLayer, setTerrain }
 }
 
 describe('applyTerrain', () => {
@@ -25,33 +37,55 @@ describe('applyTerrain', () => {
       TERRAIN_SOURCE,
       expect.objectContaining({ type: 'raster-dem' }),
     )
-    expect(setTerrain).toHaveBeenCalledWith({ source: TERRAIN_SOURCE, exaggeration: 1 })
+    expect(setTerrain).toHaveBeenCalledWith({ source: TERRAIN_SOURCE, exaggeration: 1.5 })
   })
 
-  it('does not add the source twice', () => {
-    const { map, addSource, setTerrain } = fakeMap([TERRAIN_SOURCE])
+  it('shades the hills so the relief is actually visible', () => {
+    const { map, addLayer } = fakeMap()
 
     applyTerrain(map)
 
-    expect(addSource).not.toHaveBeenCalled()
-    expect(setTerrain).toHaveBeenCalled()
+    expect(addLayer).toHaveBeenCalledWith(
+      expect.objectContaining({ id: HILLSHADE_LAYER, type: 'hillshade', source: TERRAIN_SOURCE }),
+    )
   })
 
-  it('re-applies cleanly after a style swap has wiped everything', () => {
-    const { map, addSource, setTerrain } = fakeMap()
+  it('adds a sky so the tilted view has a horizon', () => {
+    const { map, addLayer } = fakeMap()
+
+    applyTerrain(map)
+
+    expect(addLayer).toHaveBeenCalledWith(expect.objectContaining({ id: SKY_LAYER, type: 'sky' }))
+  })
+
+  it('adds nothing twice when it runs again on the same style', () => {
+    const { map, addSource, addLayer } = fakeMap()
 
     applyTerrain(map)
     applyTerrain(map)
 
     expect(addSource).toHaveBeenCalledTimes(1)
-    expect(setTerrain).toHaveBeenCalledTimes(2)
+    expect(addLayer).toHaveBeenCalledTimes(2)
+  })
+
+  it('rebuilds everything after a style swap has wiped it', () => {
+    const { map: first, addSource: firstAdd } = fakeMap()
+    applyTerrain(first)
+    expect(firstAdd).toHaveBeenCalledTimes(1)
+
+    // a style swap leaves a map with none of it, which is what style.load hands back
+    const { map: swapped, addSource: swappedAdd, addLayer: swappedLayers } = fakeMap()
+    applyTerrain(swapped)
+
+    expect(swappedAdd).toHaveBeenCalledTimes(1)
+    expect(swappedLayers).toHaveBeenCalledTimes(2)
   })
 
   it('takes an exaggeration', () => {
     const { map, setTerrain } = fakeMap()
 
-    applyTerrain(map, 1.5)
+    applyTerrain(map, 2)
 
-    expect(setTerrain).toHaveBeenCalledWith({ source: TERRAIN_SOURCE, exaggeration: 1.5 })
+    expect(setTerrain).toHaveBeenCalledWith({ source: TERRAIN_SOURCE, exaggeration: 2 })
   })
 })

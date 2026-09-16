@@ -281,38 +281,38 @@ describe('MapView style control', () => {
     expect(screen.getByRole('button', { name: 'Satellite' })).toBeInTheDocument()
   })
 
-  it('starts on the dark map', () => {
+  it('starts on satellite, where the lie of the land shows', () => {
     render(<MapView waypoints={[]} onMapClick={() => {}} />)
-
-    expect(screen.getByTestId('mock-map-root')).toHaveAttribute(
-      'data-style',
-      'mapbox://styles/mapbox/dark-v11',
-    )
-    expect(screen.getByRole('button', { name: 'Map' })).toHaveAttribute('aria-pressed', 'true')
-  })
-
-  it('switches the map to satellite', async () => {
-    render(<MapView waypoints={[]} onMapClick={() => {}} />)
-
-    await userEvent.click(screen.getByRole('button', { name: 'Satellite' }))
 
     expect(screen.getByTestId('mock-map-root')).toHaveAttribute(
       'data-style',
       'mapbox://styles/mapbox/satellite-streets-v12',
     )
-  })
-
-  it('remembers the choice for the next map', async () => {
-    const first = render(<MapView waypoints={[]} onMapClick={() => {}} />)
-    await userEvent.click(screen.getByRole('button', { name: 'Satellite' }))
-    first.unmount()
-
-    render(<MapView waypoints={[]} onMapClick={() => {}} />)
-
     expect(screen.getByRole('button', { name: 'Satellite' })).toHaveAttribute(
       'aria-pressed',
       'true',
     )
+  })
+
+  it('switches the map to the dark style', async () => {
+    render(<MapView waypoints={[]} onMapClick={() => {}} />)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Map' }))
+
+    expect(screen.getByTestId('mock-map-root')).toHaveAttribute(
+      'data-style',
+      'mapbox://styles/mapbox/dark-v11',
+    )
+  })
+
+  it('remembers the choice for the next map', async () => {
+    const first = render(<MapView waypoints={[]} onMapClick={() => {}} />)
+    await userEvent.click(screen.getByRole('button', { name: 'Map' }))
+    first.unmount()
+
+    render(<MapView waypoints={[]} onMapClick={() => {}} />)
+
+    expect(screen.getByRole('button', { name: 'Map' })).toHaveAttribute('aria-pressed', 'true')
   })
 })
 
