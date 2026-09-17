@@ -17,12 +17,12 @@ async def test_admin_sees_the_missions_they_own(
 
 
 async def test_pilot_sees_only_assigned_missions(
-    client, pilot_headers, assigned_mission: Mission, unassigned_mission: Mission
+    client, pilot_headers, flyable_mission: Mission, unassigned_mission: Mission
 ):
     resp = await client.get("/missions", headers=pilot_headers)
     assert resp.status_code == 200
     ids = {m["id"] for m in resp.json()}
-    assert ids == {str(assigned_mission.id)}
+    assert ids == {str(flyable_mission.id)}
 
 
 async def test_get_mission_by_id(client, admin_headers, assigned_mission: Mission):

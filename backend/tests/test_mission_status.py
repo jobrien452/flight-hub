@@ -143,12 +143,12 @@ async def test_mission_completes_once_the_last_pilot_submits(
     assert done.json()["status"] == "completed"
 
 
-async def test_submitting_stamps_the_report(client, pilot_headers, assigned_mission: Mission):
+async def test_submitting_stamps_the_report(client, pilot_headers, flyable_mission: Mission):
     created = await client.post(
-        f"/missions/{assigned_mission.id}/reports", json={}, headers=pilot_headers
+        f"/missions/{flyable_mission.id}/reports", json={}, headers=pilot_headers
     )
     resp = await client.patch(
-        f"/missions/{assigned_mission.id}/reports/{created.json()['id']}",
+        f"/missions/{flyable_mission.id}/reports/{created.json()['id']}",
         json={"status": "submitted"},
         headers=pilot_headers,
     )

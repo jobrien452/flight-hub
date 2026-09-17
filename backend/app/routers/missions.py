@@ -59,7 +59,8 @@ async def list_missions(current_user: CurrentUser = Depends(get_current_user)) -
         missions = await Mission.find(Mission.owner_id == current_user.user_id).to_list()
     else:
         missions = await Mission.find(
-            Mission.assigned_pilot_ids == current_user.user_id
+            Mission.assigned_pilot_ids == current_user.user_id,
+            Mission.status != MissionStatus.DRAFT,
         ).to_list()
     return [MissionOut(**m.model_dump(exclude={"id"}), id=str(m.id)) for m in missions]
 

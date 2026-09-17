@@ -6,7 +6,7 @@ from mongomock_motor import AsyncMongoMockClient
 
 from app.main import app
 from app.models import document_models
-from app.models.mission import Mission
+from app.models.mission import Mission, MissionStatus
 from app.models.user import Role, User
 from app.security import create_access_token
 
@@ -84,6 +84,19 @@ async def assigned_mission(admin_user: User, pilot_user: User) -> Mission:
         name="Survey Site A",
         owner_id=str(admin_user.id),
         assigned_pilot_ids=[str(pilot_user.id)],
+    )
+    await mission.insert()
+    return mission
+
+
+@pytest_asyncio.fixture
+async def flyable_mission(admin_user: User, pilot_user: User) -> Mission:
+    # assigned and published, the only shape a pilot can actually act on
+    mission = Mission(
+        name="Survey Site A",
+        owner_id=str(admin_user.id),
+        assigned_pilot_ids=[str(pilot_user.id)],
+        status=MissionStatus.PUBLISHED,
     )
     await mission.insert()
     return mission

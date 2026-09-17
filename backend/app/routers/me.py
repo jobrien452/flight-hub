@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 
 from app.deps import CurrentUser, get_current_user
-from app.models.mission import Mission
+from app.models.mission import Mission, MissionStatus
 from app.models.mission_report import MissionReport
 from app.models.user import Role
 from app.schemas.mission import MissionOut
@@ -17,7 +17,8 @@ async def my_missions(
     # a pilot's own work queue, or everything an admin owns
     if current_user.role == Role.PILOT:
         missions = await Mission.find(
-            Mission.assigned_pilot_ids == current_user.user_id
+            Mission.assigned_pilot_ids == current_user.user_id,
+            Mission.status != MissionStatus.DRAFT,
         ).to_list()
     else:
         missions = await Mission.find(Mission.owner_id == current_user.user_id).to_list()
