@@ -4,6 +4,7 @@ import type { ApiToken } from '../types/apiToken'
 import type { Drone } from '../types/drone'
 import type { Mission } from '../types/mission'
 import type { MissionReport } from '../types/missionReport'
+import type { DashboardStats } from '../types/stats'
 import type { User } from '../types/user'
 
 export const fixtureMission: Mission = {
@@ -42,6 +43,39 @@ export const fixtureReport: MissionReport = {
   submitted_at: null,
   created_at: '2026-01-01T00:00:00Z',
   updated_at: '2026-01-01T00:00:00Z',
+}
+
+export const fixtureStats: DashboardStats = {
+  missions_total: 7,
+  missions_by_status: {
+    draft: 2,
+    published: 1,
+    acknowledged: 1,
+    in_flight: 0,
+    completed: 3,
+  },
+  drones_total: 2,
+  drones_by_status: { available: 1, in_flight: 0, maintenance: 1, retired: 0 },
+  fleet_flight_hours: 14.75,
+  fleet_missions_flown: 9,
+  pilots: [
+    {
+      pilot_id: 'pilot-1',
+      name: 'Pete Pilot',
+      email: 'pete@flyby-robotics.dev',
+      missions_assigned: 4,
+      reports_submitted: 3,
+      flight_hours: 6.5,
+    },
+    {
+      pilot_id: 'pilot-2',
+      name: 'Priya Pilot',
+      email: 'priya@flyby-robotics.dev',
+      missions_assigned: 1,
+      reports_submitted: 0,
+      flight_hours: 0,
+    },
+  ],
 }
 
 export const fixtureUsers: User[] = [
@@ -91,6 +125,8 @@ export const handlers = [
     const users = role ? fixtureUsers.filter((u) => u.role === role) : fixtureUsers
     return HttpResponse.json(users)
   }),
+
+  http.get(`${API_URL}/stats`, () => HttpResponse.json(fixtureStats)),
 
   http.get(`${API_URL}/drones`, () => HttpResponse.json([fixtureDrone])),
 

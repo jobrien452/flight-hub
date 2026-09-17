@@ -44,6 +44,27 @@ describe('routing', () => {
   })
 })
 
+describe('dashboard', () => {
+  it('opens the dashboard from the nav', async () => {
+    localStorage.setItem('flyby.session', JSON.stringify(session))
+    renderApp('/missions')
+
+    await userEvent.click(screen.getByRole('link', { name: 'Dashboard' }))
+
+    expect(await screen.findByRole('heading', { name: 'Dashboard' })).toBeInTheDocument()
+  })
+
+  it('keeps the dashboard link away from pilots', () => {
+    localStorage.setItem(
+      'flyby.session',
+      JSON.stringify({ ...session, user_id: 'pilot-1', name: 'Pete Pilot', role: 'pilot' }),
+    )
+    renderApp('/missions')
+
+    expect(screen.queryByRole('link', { name: 'Dashboard' })).not.toBeInTheDocument()
+  })
+})
+
 describe('fleet', () => {
   it('opens the fleet from the nav', async () => {
     localStorage.setItem('flyby.session', JSON.stringify(session))

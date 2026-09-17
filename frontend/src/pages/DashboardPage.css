@@ -1,0 +1,49 @@
+.dashboard-breakdowns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+  margin: 16px 0 24px;
+}
+
+.breakdown h2,
+.dashboard-breakdowns + h2 {
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-dim);
+  margin: 0 0 8px;
+}
+
+.breakdown table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0 2px;
+}
+
+.breakdown th {
+  font-weight: 400;
+  text-align: left;
+  color: var(--text-dim);
+  white-space: nowrap;
+  padding-right: 10px;
+  width: 1%;
+}
+
+.breakdown-track {
+  width: 100%;
+  padding-right: 10px;
+}
+
+.breakdown-bar {
+  display: block;
+  height: 10px;
+  min-width: 2px;
+  border-radius: 0 3px 3px 0;
+  background: var(--accent);
+}
+
+.breakdown-count {
+  text-align: right;
+  width: 1%;
+  white-space: nowrap;
+}

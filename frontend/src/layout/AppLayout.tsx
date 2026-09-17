@@ -18,6 +18,11 @@ export function AppLayout() {
             Fleet
           </NavLink>
           {session?.role === 'admin' && (
+            <NavLink to="/dashboard" className={({ isActive }) => (isActive ? 'active' : '')}>
+              Dashboard
+            </NavLink>
+          )}
+          {session?.role === 'admin' && (
             <NavLink to="/api-docs" className={({ isActive }) => (isActive ? 'active' : '')}>
               API
             </NavLink>
