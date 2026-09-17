@@ -2,7 +2,7 @@ import { http, HttpResponse } from 'msw'
 import { API_URL } from '../api/client'
 import type { ApiToken } from '../types/apiToken'
 import type { Drone } from '../types/drone'
-import type { Mission } from '../types/mission'
+import type { Mission, MissionSummary } from '../types/mission'
 import type { MissionReport } from '../types/missionReport'
 import type { DashboardStats } from '../types/stats'
 import type { User } from '../types/user'
@@ -14,10 +14,24 @@ export const fixtureMission: Mission = {
   owner_id: 'admin-1',
   assigned_pilot_ids: ['pilot-1'],
   drone_id: null,
+  waypoint_count: 1,
   waypoints: [{ lat: 1, lng: 2, alt: 10 }],
   plan_params: null,
   created_at: '2026-01-01T00:00:00Z',
   updated_at: '2026-01-01T00:00:00Z',
+}
+
+// what the list route actually returns, the route itself is not on it
+export const fixtureMissionSummary: MissionSummary = {
+  id: fixtureMission.id,
+  name: fixtureMission.name,
+  status: fixtureMission.status,
+  owner_id: fixtureMission.owner_id,
+  assigned_pilot_ids: fixtureMission.assigned_pilot_ids,
+  drone_id: fixtureMission.drone_id,
+  waypoint_count: fixtureMission.waypoint_count,
+  created_at: fixtureMission.created_at,
+  updated_at: fixtureMission.updated_at,
 }
 
 export const fixtureDrone: Drone = {
@@ -147,7 +161,12 @@ export const handlers = [
 
   http.delete(`${API_URL}/drones/:id`, () => new HttpResponse(null, { status: 204 })),
 
-  http.get(`${API_URL}/missions`, () => HttpResponse.json([fixtureMission])),
+  http.get(`${API_URL}/missions`, () => HttpResponse.json([fixtureMissionSummary])),
+
+  http.get(`${API_URL}/missions/:id/waypoints`, ({ params }) => {
+    if (params.id !== fixtureMission.id) return new HttpResponse(null, { status: 404 })
+    return HttpResponse.json(fixtureMission.waypoints)
+  }),
 
   http.get(`${API_URL}/missions/:id`, ({ params }) => {
     if (params.id !== fixtureMission.id) {

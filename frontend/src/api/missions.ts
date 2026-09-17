@@ -1,8 +1,19 @@
 import { apiFetch } from './client'
-import type { Mission, MissionCreateInput, MissionUpdateInput } from '../types/mission'
+import type {
+  Mission,
+  MissionCreateInput,
+  MissionSummary,
+  MissionUpdateInput,
+  Waypoint,
+} from '../types/mission'
 
-export async function listMissions(token: string): Promise<Mission[]> {
-  return apiFetch<Mission[]>('/missions', token)
+// summaries only, the route is fetched per mission by getMissionWaypoints
+export async function listMissions(token: string): Promise<MissionSummary[]> {
+  return apiFetch<MissionSummary[]>('/missions', token)
+}
+
+export async function getMissionWaypoints(id: string, token: string): Promise<Waypoint[]> {
+  return apiFetch<Waypoint[]>(`/missions/${id}/waypoints`, token)
 }
 
 export async function getMission(id: string, token: string): Promise<Mission> {

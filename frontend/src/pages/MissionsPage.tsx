@@ -3,10 +3,10 @@ import { Link, useNavigate } from 'react-router-dom'
 import { deleteMission, listMissions, publishMission } from '../api/missions'
 import { useAuth } from '../auth/useAuth'
 import { ConfirmDialog } from '../components/ConfirmDialog'
-import type { Mission } from '../types/mission'
+import type { MissionSummary } from '../types/mission'
 import './MissionsPage.css'
 
-type PendingAction = { mission: Mission; kind: 'edit' | 'delete' | 'published' }
+type PendingAction = { mission: MissionSummary; kind: 'edit' | 'delete' | 'published' }
 
 function RowMenu({
   mission,
@@ -14,7 +14,7 @@ function RowMenu({
   onPublish,
   onDelete,
 }: {
-  mission: Mission
+  mission: MissionSummary
   onEdit: () => void
   onPublish: () => void
   onDelete: () => void
@@ -103,7 +103,7 @@ function RowMenu({
 export function MissionsPage() {
   const { session } = useAuth()
   const navigate = useNavigate()
-  const [missions, setMissions] = useState<Mission[] | null>(null)
+  const [missions, setMissions] = useState<MissionSummary[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [pending, setPending] = useState<PendingAction | null>(null)
   const [working, setWorking] = useState(false)
@@ -116,7 +116,7 @@ export function MissionsPage() {
       .catch(() => setError('Could not load missions'))
   }, [session])
 
-  async function handleDelete(mission: Mission) {
+  async function handleDelete(mission: MissionSummary) {
     if (!session) return
     setWorking(true)
     setActionError(null)
@@ -131,12 +131,12 @@ export function MissionsPage() {
     }
   }
 
-  function startAction(mission: Mission, kind: PendingAction['kind']) {
+  function startAction(mission: MissionSummary, kind: PendingAction['kind']) {
     setActionError(null)
     setPending({ mission, kind })
   }
 
-  async function handlePublish(mission: Mission) {
+  async function handlePublish(mission: MissionSummary) {
     if (!session) return
     setActionError(null)
     try {
@@ -175,6 +175,7 @@ export function MissionsPage() {
               <th>Name</th>
               <th>Status</th>
               <th>Pilots</th>
+              <th>Waypoints</th>
               <th>Updated</th>
               {session.role === 'admin' && <th />}
             </tr>
@@ -187,6 +188,7 @@ export function MissionsPage() {
                 </td>
                 <td className="mono">{mission.status}</td>
                 <td>{mission.assigned_pilot_ids.length}</td>
+                <td className="mono">{mission.waypoint_count}</td>
                 <td className="mono">{new Date(mission.updated_at).toLocaleDateString()}</td>
                 {session.role === 'admin' && (
                   <td className="row-action">

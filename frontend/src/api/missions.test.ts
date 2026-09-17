@@ -5,6 +5,7 @@ import {
   createMission,
   deleteMission,
   getMission,
+  getMissionWaypoints,
   listMissions,
   publishMission,
   startMission,
@@ -18,7 +19,7 @@ const token = 'fake-token'
 describe('listMissions', () => {
   it('returns the list of missions', async () => {
     const missions = await listMissions(token)
-    expect(missions).toEqual([fixtureMission])
+    expect(missions.map((m) => m.id)).toEqual([fixtureMission.id])
   })
 })
 
@@ -85,5 +86,27 @@ describe('startMission', () => {
   it('moves the mission to in flight', async () => {
     const mission = await startMission(fixtureMission.id, token)
     expect(mission.status).toBe('in_flight')
+  })
+})
+
+describe('listMissions', () => {
+  it('comes back without the routes, just a count of the points', async () => {
+    const [mission] = await listMissions(token)
+
+    expect(mission).not.toHaveProperty('waypoints')
+    expect(mission).not.toHaveProperty('plan_params')
+    expect(mission.waypoint_count).toBe(1)
+  })
+})
+
+describe('getMissionWaypoints', () => {
+  it('fetches the route on its own', async () => {
+    const waypoints = await getMissionWaypoints(fixtureMission.id, token)
+
+    expect(waypoints).toEqual(fixtureMission.waypoints)
+  })
+
+  it('throws for a mission that is not there', async () => {
+    await expect(getMissionWaypoints('nope', token)).rejects.toThrow()
   })
 })

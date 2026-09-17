@@ -5,7 +5,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { API_URL } from '../api/client'
 import { AuthProvider } from '../auth/AuthContext'
-import { fixtureMission } from '../mocks/handlers'
+import { fixtureMission, fixtureMissionSummary } from '../mocks/handlers'
 import { server } from '../mocks/server'
 import { MissionsPage } from './MissionsPage'
 
@@ -30,7 +30,7 @@ function renderPage(session: Record<string, string>) {
 function serveMissions(overrides: Record<string, unknown>) {
   server.use(
     http.get(`${API_URL}/missions`, () =>
-      HttpResponse.json([{ ...fixtureMission, ...overrides }]),
+      HttpResponse.json([{ ...fixtureMissionSummary, ...overrides }]),
     ),
   )
 }
@@ -43,6 +43,14 @@ const adminSession = { token: 'fake-token', user_id: 'admin-1', name: 'Ada Admin
 const pilotSession = { token: 'fake-token', user_id: 'pilot-1', name: 'Pete Pilot', role: 'pilot' }
 
 describe('MissionsPage', () => {
+  it('shows how big each plan is without pulling the route down', async () => {
+    serveMissions({ waypoint_count: 128 })
+    renderPage(adminSession)
+
+    const row = await screen.findByRole('row', { name: new RegExp(fixtureMission.name) })
+    expect(within(row).getByText('128')).toBeInTheDocument()
+  })
+
   it('lists missions for the signed in user', async () => {
     renderPage(adminSession)
     expect(await screen.findByText(fixtureMission.name)).toBeInTheDocument()
