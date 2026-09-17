@@ -2,7 +2,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field
 
-from app.models.mission import MissionStatus, PlanParams, Waypoint
+from app.models.mission import Mission, MissionStatus, PlanParams, Waypoint
 
 
 class MissionCreate(BaseModel):
@@ -34,14 +34,36 @@ class MissionUnassign(BaseModel):
     message: str | None = None
 
 
-class MissionOut(BaseModel):
+class MissionSummaryOut(BaseModel):
+    # what the mission table needs. the route itself can run to thousands of
+    # points, so it is fetched per mission rather than shipped with every row
     id: str
     name: str
     status: MissionStatus
     owner_id: str
     assigned_pilot_ids: list[str]
     drone_id: str | None = None
-    waypoints: list[Waypoint]
-    plan_params: PlanParams | None = Field(default=None, discriminator="type")
+    waypoint_count: int
     created_at: datetime
     updated_at: datetime
+
+
+class MissionOut(MissionSummaryOut):
+    waypoints: list[Waypoint]
+    plan_params: PlanParams | None = Field(default=None, discriminator="type")
+
+
+def mission_summary(mission: Mission) -> MissionSummaryOut:
+    return MissionSummaryOut(
+        **mission.model_dump(exclude={"id", "waypoints", "plan_params"}),
+        id=str(mission.id),
+        waypoint_count=len(mission.waypoints),
+    )
+
+
+def mission_out(mission: Mission) -> MissionOut:
+    return MissionOut(
+        **mission.model_dump(exclude={"id"}),
+        id=str(mission.id),
+        waypoint_count=len(mission.waypoints),
+    )

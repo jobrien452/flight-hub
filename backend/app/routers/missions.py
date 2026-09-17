@@ -15,14 +15,18 @@ from app.models.mission import (
     STARTABLE,
     Mission,
     MissionStatus,
+    Waypoint,
 )
 from app.models.user import Role, User
 from app.schemas.mission import (
     MissionAssign,
     MissionCreate,
     MissionOut,
+    MissionSummaryOut,
     MissionUnassign,
     MissionUpdate,
+    mission_out,
+    mission_summary,
 )
 
 logger = logging.getLogger(__name__)
@@ -31,7 +35,7 @@ router = APIRouter(prefix="/missions", tags=["missions"])
 
 
 def _out(mission: Mission) -> MissionOut:
-    return MissionOut(**mission.model_dump(exclude={"id"}), id=str(mission.id))
+    return mission_out(mission)
 
 
 async def _get_pilot(pilot_id: str) -> User:
@@ -55,8 +59,10 @@ def _notify(send, to_email: str, mission: Mission, message: str | None) -> None:
         logger.exception("failed to email %s about mission %s", to_email, mission.id)
 
 
-@router.get("", response_model=list[MissionOut])
-async def list_missions(current_user: CurrentUser = Depends(get_current_user)) -> list[MissionOut]:
+@router.get("", response_model=list[MissionSummaryOut])
+async def list_missions(
+    current_user: CurrentUser = Depends(get_current_user),
+) -> list[MissionSummaryOut]:
     # an admin's missions are their own, a pilot's are whatever they are flying
     if current_user.role == Role.ADMIN:
         missions = await Mission.find(Mission.owner_id == current_user.user_id).to_list()
@@ -65,15 +71,24 @@ async def list_missions(current_user: CurrentUser = Depends(get_current_user)) -
             Mission.assigned_pilot_ids == current_user.user_id,
             Mission.status != MissionStatus.DRAFT,
         ).to_list()
-    return [MissionOut(**m.model_dump(exclude={"id"}), id=str(m.id)) for m in missions]
+    return [mission_summary(m) for m in missions]
 
 
 @router.get("/{mission_id}", response_model=MissionOut)
 async def get_mission(
     mission_id: str, current_user: CurrentUser = Depends(get_current_user)
 ) -> MissionOut:
+    return _out(await get_owned_mission(mission_id, current_user))
+
+
+# the route on its own, for anything that has a mission already and now needs to
+# draw or fly it. kept off the list so a table of missions stays cheap to load
+@router.get("/{mission_id}/waypoints", response_model=list[Waypoint])
+async def get_mission_waypoints(
+    mission_id: str, current_user: CurrentUser = Depends(get_current_user)
+) -> list[Waypoint]:
     mission = await get_owned_mission(mission_id, current_user)
-    return MissionOut(**mission.model_dump(exclude={"id"}), id=str(mission.id))
+    return mission.waypoints
 
 
 @router.post("", response_model=MissionOut, status_code=status.HTTP_201_CREATED)
@@ -82,7 +97,7 @@ async def create_mission(
 ) -> MissionOut:
     mission = Mission(**payload.model_dump(), owner_id=current_user.user_id)
     await mission.insert()
-    return MissionOut(**mission.model_dump(exclude={"id"}), id=str(mission.id))
+    return _out(mission)
 
 
 @router.patch("/{mission_id}", response_model=MissionOut)
@@ -100,7 +115,7 @@ async def update_mission(
         setattr(mission, field, value)
     mission.updated_at = datetime.now(timezone.utc)
     await mission.save()
-    return MissionOut(**mission.model_dump(exclude={"id"}), id=str(mission.id))
+    return _out(mission)
 
 
 @router.post("/{mission_id}/publish", response_model=MissionOut)

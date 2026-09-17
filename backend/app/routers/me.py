@@ -4,16 +4,16 @@ from app.deps import CurrentUser, get_current_user
 from app.models.mission import Mission, MissionStatus
 from app.models.mission_report import MissionReport
 from app.models.user import Role
-from app.schemas.mission import MissionOut
+from app.schemas.mission import MissionSummaryOut, mission_summary
 from app.schemas.mission_report import MissionReportOut
 
 router = APIRouter(prefix="/me", tags=["me"])
 
 
-@router.get("/missions", response_model=list[MissionOut])
+@router.get("/missions", response_model=list[MissionSummaryOut])
 async def my_missions(
     current_user: CurrentUser = Depends(get_current_user),
-) -> list[MissionOut]:
+) -> list[MissionSummaryOut]:
     # a pilot's own work queue, or everything an admin owns
     if current_user.role == Role.PILOT:
         missions = await Mission.find(
@@ -22,7 +22,7 @@ async def my_missions(
         ).to_list()
     else:
         missions = await Mission.find(Mission.owner_id == current_user.user_id).to_list()
-    return [MissionOut(**m.model_dump(exclude={"id"}), id=str(m.id)) for m in missions]
+    return [mission_summary(m) for m in missions]
 
 
 @router.get("/reports", response_model=list[MissionReportOut])
