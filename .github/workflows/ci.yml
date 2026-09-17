@@ -103,9 +103,9 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          # vite bakes these in at build time, they cannot be set when the container runs
+          # vite bakes this in at build time, it cannot be set when the container runs.
+          # the mapbox token is not here on purpose, the api hands that out at runtime
           build-args: |
             VITE_API_URL=/api
-            VITE_MAPBOX_TOKEN=${{ secrets.VITE_MAPBOX_TOKEN }}
           cache-from: type=gha,scope=${{ matrix.image }}
           cache-to: type=gha,mode=max,scope=${{ matrix.image }}

@@ -10,6 +10,7 @@ from app.invites import sync_invites
 from app.routers import (
     api_tokens,
     auth,
+    config,
     drones,
     me,
     mission_reports,
@@ -53,6 +54,7 @@ app.include_router(api_tokens.router, include_in_schema=False)
 app.include_router(missions.router)
 app.include_router(drones.router)
 app.include_router(stats.router)
+app.include_router(config.router)
 app.include_router(mission_reports.router)
 app.include_router(me.router)
 app.include_router(users.router)

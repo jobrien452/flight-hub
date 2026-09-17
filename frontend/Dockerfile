@@ -7,11 +7,10 @@ RUN npm ci
 
 COPY . .
 
-# vite bakes these into the build, they can't be set at container runtime
+# vite bakes this into the build, it can't be set at container runtime.
+# the mapbox token deliberately isn't here, the api serves it to signed in users
 ARG VITE_API_URL
-ARG VITE_MAPBOX_TOKEN
 ENV VITE_API_URL=$VITE_API_URL
-ENV VITE_MAPBOX_TOKEN=$VITE_MAPBOX_TOKEN
 
 RUN npm run build
 

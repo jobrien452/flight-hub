@@ -140,6 +140,10 @@ export const handlers = [
     return HttpResponse.json(users)
   }),
 
+  http.get(`${API_URL}/config/map-token`, () =>
+    HttpResponse.json({ token: 'pk.fixture-token' }),
+  ),
+
   http.get(`${API_URL}/stats`, () => HttpResponse.json(fixtureStats)),
 
   http.get(`${API_URL}/drones`, () => HttpResponse.json([fixtureDrone])),

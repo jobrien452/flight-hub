@@ -23,6 +23,10 @@ class Settings(BaseSettings):
     smtp_from_email: str = "no-reply@example.com"
     smtp_use_tls: bool = True
 
+    # handed to signed in users at runtime instead of being baked into the
+    # frontend bundle, so it can be rotated without rebuilding the frontend
+    mapbox_token: str = ""
+
     # comma separated, only needed when the frontend calls this api cross-origin
     # (e.g. local dev, vite on :5173 hitting this on :8000). Not needed when nginx
     # reverse-proxies /api to this service, that's already same-origin.

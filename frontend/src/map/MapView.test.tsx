@@ -139,18 +139,37 @@ vi.mock('react-map-gl/mapbox', () => ({
   ),
 }))
 
+function signedIn() {
+  localStorage.setItem(
+    'flyby.session',
+    JSON.stringify({ token: 'fake-token', user_id: 'admin-1', name: 'Ada Admin', role: 'admin' }),
+  )
+}
+
+// the token is fetched now, so the map only exists after that resolves
+async function renderMap(ui: React.ReactElement) {
+  const result = render(ui)
+  await screen.findByTestId('mock-map-root')
+  return result
+}
+
+beforeEach(() => {
+  localStorage.clear()
+  signedIn()
+})
+
 describe('MapView', () => {
-  it('calls onMapClick with lng/lat when the map is clicked', () => {
+  it('calls onMapClick with lng/lat when the map is clicked', async () => {
     const onMapClick = vi.fn()
-    render(<MapView waypoints={[]} onMapClick={onMapClick} />)
+    await renderMap(<MapView waypoints={[]} onMapClick={onMapClick} />)
 
     fireEvent.click(screen.getByTestId('mock-map'))
 
     expect(onMapClick).toHaveBeenCalledWith({ lng: 10, lat: 20 })
   })
 
-  it('opens on the middle waypoint rather than the corner the plan starts at', () => {
-    render(
+  it('opens on the middle waypoint rather than the corner the plan starts at', async () => {
+    await renderMap(
       <MapView
         waypoints={[
           { lat: 1, lng: 1 },
@@ -164,8 +183,8 @@ describe('MapView', () => {
     expect(screen.getByTestId('mock-map-root')).toHaveAttribute('data-centre', '2,2')
   })
 
-  it('falls back to a default view for an empty plan', () => {
-    render(<MapView waypoints={[]} onMapClick={() => {}} />)
+  it('falls back to a default view for an empty plan', async () => {
+    await renderMap(<MapView waypoints={[]} onMapClick={() => {}} />)
 
     expect(screen.getByTestId('mock-map-root')).toHaveAttribute(
       'data-centre',
@@ -173,14 +192,14 @@ describe('MapView', () => {
     )
   })
 
-  it('puts a scale bar in the bottom left', () => {
-    render(<MapView waypoints={[]} onMapClick={() => {}} />)
+  it('puts a scale bar in the bottom left', async () => {
+    await renderMap(<MapView waypoints={[]} onMapClick={() => {}} />)
 
     expect(screen.getByTestId('mock-scale')).toHaveAttribute('data-position', 'bottom-left')
   })
 
-  it('hands the plan to the 3d overlay with each waypoint altitude', () => {
-    render(
+  it('hands the plan to the 3d overlay with each waypoint altitude', async () => {
+    await renderMap(
       <MapView
         waypoints={[
           { lat: 1, lng: 2, alt: 40 },
@@ -194,8 +213,8 @@ describe('MapView', () => {
   })
 
 
-  it('draws the in-progress tool overlay in its own source', () => {
-    render(
+  it('draws the in-progress tool overlay in its own source', async () => {
+    await renderMap(
       <MapView
         waypoints={[]}
         onMapClick={() => {}}
@@ -211,8 +230,8 @@ describe('MapView', () => {
     expect(screen.getByTestId('mock-source-tool-overlay')).toHaveAttribute('data-count', '2')
   })
 
-  it('adds a polygon feature for the ghost boundary', () => {
-    render(
+  it('adds a polygon feature for the ghost boundary', async () => {
+    await renderMap(
       <MapView
         waypoints={[]}
         onMapClick={() => {}}
@@ -231,8 +250,8 @@ describe('MapView', () => {
     expect(screen.getByTestId('mock-source-tool-overlay')).toHaveAttribute('data-count', '2')
   })
 
-  it('skips the overlay source when nothing is in progress', () => {
-    render(<MapView waypoints={[]} onMapClick={() => {}} />)
+  it('skips the overlay source when nothing is in progress', async () => {
+    await renderMap(<MapView waypoints={[]} onMapClick={() => {}} />)
 
     expect(screen.queryByTestId('mock-source-tool-overlay')).not.toBeInTheDocument()
   })
@@ -246,7 +265,7 @@ describe('MapView corner dragging', () => {
     { lat: 2, lng: 2 },
   ]
 
-  function renderDraggable(handlers: Partial<Record<string, ReturnType<typeof vi.fn>>> = {}) {
+  async function renderDraggable(handlers: Partial<Record<string, ReturnType<typeof vi.fn>>> = {}) {
     const props = {
       onMapClick: vi.fn(),
       onHandleDragStart: vi.fn(),
@@ -254,22 +273,22 @@ describe('MapView corner dragging', () => {
       onHandleDragEnd: vi.fn(),
       ...handlers,
     }
-    render(
+    await renderMap(
       <MapView waypoints={[]} overlay={{ markers: box, ghost: box, draggable: true }} {...props} />,
     )
     return props
   }
 
-  it('reports which corner was grabbed', () => {
-    const props = renderDraggable()
+  it('reports which corner was grabbed', async () => {
+    const props = await renderDraggable()
 
     fireEvent.click(screen.getByTestId('grab-corner'))
 
     expect(props.onHandleDragStart).toHaveBeenCalledWith(2)
   })
 
-  it('reports the pointer position while a corner is held', () => {
-    const props = renderDraggable()
+  it('reports the pointer position while a corner is held', async () => {
+    const props = await renderDraggable()
 
     fireEvent.click(screen.getByTestId('grab-corner'))
     fireEvent.click(screen.getByTestId('move-pointer'))
@@ -277,8 +296,8 @@ describe('MapView corner dragging', () => {
     expect(props.onHandleDrag).toHaveBeenCalledWith({ lng: 11, lat: 21 })
   })
 
-  it('ignores pointer movement when no corner was grabbed', () => {
-    const props = renderDraggable()
+  it('ignores pointer movement when no corner was grabbed', async () => {
+    const props = await renderDraggable()
 
     fireEvent.click(screen.getByTestId('grab-nothing'))
     fireEvent.click(screen.getByTestId('move-pointer'))
@@ -286,8 +305,8 @@ describe('MapView corner dragging', () => {
     expect(props.onHandleDrag).not.toHaveBeenCalled()
   })
 
-  it('ends the drag on release', () => {
-    const props = renderDraggable()
+  it('ends the drag on release', async () => {
+    const props = await renderDraggable()
 
     fireEvent.click(screen.getByTestId('grab-corner'))
     fireEvent.click(screen.getByTestId('release'))
@@ -297,8 +316,8 @@ describe('MapView corner dragging', () => {
     expect(props.onHandleDrag).not.toHaveBeenCalled()
   })
 
-  it('does not move a handle for the wobble of an ordinary click', () => {
-    const props = renderDraggable()
+  it('does not move a handle for the wobble of an ordinary click', async () => {
+    const props = await renderDraggable()
 
     fireEvent.click(screen.getByTestId('grab-corner'))
     fireEvent.click(screen.getByTestId('nudge-pointer'))
@@ -308,8 +327,8 @@ describe('MapView corner dragging', () => {
     expect(props.onHandleDrag).not.toHaveBeenCalled()
   })
 
-  it('moves once the pointer has actually travelled', () => {
-    const props = renderDraggable()
+  it('moves once the pointer has actually travelled', async () => {
+    const props = await renderDraggable()
 
     fireEvent.click(screen.getByTestId('grab-corner'))
     fireEvent.click(screen.getByTestId('move-pointer'))
@@ -317,8 +336,8 @@ describe('MapView corner dragging', () => {
     expect(props.onHandleDrag).toHaveBeenCalledWith({ lng: 11, lat: 21 })
   })
 
-  it('keeps following small movements once the drag is under way', () => {
-    const props = renderDraggable()
+  it('keeps following small movements once the drag is under way', async () => {
+    const props = await renderDraggable()
 
     fireEvent.click(screen.getByTestId('grab-corner'))
     fireEvent.click(screen.getByTestId('move-pointer'))
@@ -327,8 +346,8 @@ describe('MapView corner dragging', () => {
     expect(props.onHandleDrag).toHaveBeenCalledTimes(2)
   })
 
-  it('starts the threshold afresh on the next grab', () => {
-    const props = renderDraggable()
+  it('starts the threshold afresh on the next grab', async () => {
+    const props = await renderDraggable()
 
     fireEvent.click(screen.getByTestId('grab-corner'))
     fireEvent.click(screen.getByTestId('move-pointer'))
@@ -341,16 +360,16 @@ describe('MapView corner dragging', () => {
     expect(props.onHandleDrag).toHaveBeenCalledTimes(1)
   })
 
-  it('keeps the grab cursor for the rectangle corner handles', () => {
-    renderDraggable()
+  it('keeps the grab cursor for the rectangle corner handles', async () => {
+    await renderDraggable()
 
     fireEvent.click(screen.getByTestId('enter-layer'))
 
     expect(screen.getByTestId('mock-map-root')).toHaveAttribute('data-cursor', 'grab')
   })
 
-  it('swallows the click that ends a drag so it does not place a new corner', () => {
-    const props = renderDraggable()
+  it('swallows the click that ends a drag so it does not place a new corner', async () => {
+    const props = await renderDraggable()
 
     fireEvent.click(screen.getByTestId('grab-corner'))
     fireEvent.click(screen.getByTestId('release'))
@@ -359,22 +378,22 @@ describe('MapView corner dragging', () => {
     expect(props.onMapClick).not.toHaveBeenCalled()
   })
 
-  it('still places a corner on a plain map click', () => {
-    const props = renderDraggable()
+  it('still places a corner on a plain map click', async () => {
+    const props = await renderDraggable()
 
     fireEvent.click(screen.getByTestId('mock-map'))
 
     expect(props.onMapClick).toHaveBeenCalledWith({ lng: 10, lat: 20 })
   })
 
-  it('only makes markers grabbable when the overlay says they are draggable', () => {
-    render(<MapView waypoints={[]} onMapClick={() => {}} overlay={{ markers: box }} />)
+  it('only makes markers grabbable when the overlay says they are draggable', async () => {
+    await renderMap(<MapView waypoints={[]} onMapClick={() => {}} overlay={{ markers: box }} />)
 
     expect(screen.getByTestId('mock-map-root')).toHaveAttribute('data-interactive', '')
   })
 
-  it('makes markers grabbable when the overlay is draggable', () => {
-    renderDraggable()
+  it('makes markers grabbable when the overlay is draggable', async () => {
+    await renderDraggable()
 
     expect(screen.getByTestId('mock-map-root')).toHaveAttribute(
       'data-interactive',
@@ -382,8 +401,8 @@ describe('MapView corner dragging', () => {
     )
   })
 
-  it('flags the selected marker so it can be drawn differently', () => {
-    render(
+  it('flags the selected marker so it can be drawn differently', async () => {
+    await renderMap(
       <MapView
         waypoints={[]}
         onMapClick={() => {}}
@@ -394,8 +413,8 @@ describe('MapView corner dragging', () => {
     expect(screen.getByTestId('mock-source-tool-overlay')).toHaveAttribute('data-selected', '1')
   })
 
-  it('flags nothing when no marker is selected', () => {
-    renderDraggable()
+  it('flags nothing when no marker is selected', async () => {
+    await renderDraggable()
 
     expect(screen.getByTestId('mock-source-tool-overlay')).toHaveAttribute('data-selected', '0')
   })
@@ -404,17 +423,18 @@ describe('MapView corner dragging', () => {
 describe('MapView style control', () => {
   beforeEach(() => {
     localStorage.clear()
+    signedIn()
   })
 
-  it('offers both map and satellite', () => {
-    render(<MapView waypoints={[]} onMapClick={() => {}} />)
+  it('offers both map and satellite', async () => {
+    await renderMap(<MapView waypoints={[]} onMapClick={() => {}} />)
 
     expect(screen.getByRole('button', { name: 'Map' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Satellite' })).toBeInTheDocument()
   })
 
-  it('starts on satellite, where the lie of the land shows', () => {
-    render(<MapView waypoints={[]} onMapClick={() => {}} />)
+  it('starts on satellite, where the lie of the land shows', async () => {
+    await renderMap(<MapView waypoints={[]} onMapClick={() => {}} />)
 
     expect(screen.getByTestId('mock-map-root')).toHaveAttribute(
       'data-style',
@@ -427,7 +447,7 @@ describe('MapView style control', () => {
   })
 
   it('switches the map to the dark style', async () => {
-    render(<MapView waypoints={[]} onMapClick={() => {}} />)
+    await renderMap(<MapView waypoints={[]} onMapClick={() => {}} />)
 
     await userEvent.click(screen.getByRole('button', { name: 'Map' }))
 
@@ -438,11 +458,11 @@ describe('MapView style control', () => {
   })
 
   it('remembers the choice for the next map', async () => {
-    const first = render(<MapView waypoints={[]} onMapClick={() => {}} />)
+    const first = await renderMap(<MapView waypoints={[]} onMapClick={() => {}} />)
     await userEvent.click(screen.getByRole('button', { name: 'Map' }))
     first.unmount()
 
-    render(<MapView waypoints={[]} onMapClick={() => {}} />)
+    await renderMap(<MapView waypoints={[]} onMapClick={() => {}} />)
 
     expect(screen.getByRole('button', { name: 'Map' })).toHaveAttribute('aria-pressed', 'true')
   })
@@ -454,7 +474,7 @@ describe('MapView dragging waypoints at altitude', () => {
     { lat: 3, lng: 4, alt: 60 },
   ]
 
-  function renderSelectTool(handlers: Record<string, ReturnType<typeof vi.fn>> = {}) {
+  async function renderSelectTool(handlers: Record<string, ReturnType<typeof vi.fn>> = {}) {
     const props = {
       onMapClick: vi.fn(),
       onHandleDragStart: vi.fn(),
@@ -462,7 +482,7 @@ describe('MapView dragging waypoints at altitude', () => {
       onHandleDragEnd: vi.fn(),
       ...handlers,
     }
-    render(
+    await renderMap(
       <MapView
         waypoints={plan}
         overlay={{ markers: [], dragsPlanWaypoints: true, selected: 1 }}
@@ -476,36 +496,36 @@ describe('MapView dragging waypoints at altitude', () => {
     pickedIndex.value = null
   })
 
-  it('makes the elevated dots pickable for the select tool', () => {
-    renderSelectTool()
+  it('makes the elevated dots pickable for the select tool', async () => {
+    await renderSelectTool()
 
     expect(screen.getByTestId('mock-flight-overlay')).toHaveAttribute('data-pickable', 'true')
   })
 
-  it('leaves the dots unpickable for the other tools', () => {
-    render(<MapView waypoints={plan} onMapClick={() => {}} overlay={{ markers: [] }} />)
+  it('leaves the dots unpickable for the other tools', async () => {
+    await renderMap(<MapView waypoints={plan} onMapClick={() => {}} overlay={{ markers: [] }} />)
 
     expect(screen.getByTestId('mock-flight-overlay')).toHaveAttribute('data-pickable', 'false')
   })
 
-  it('passes the selection through so the right dot is highlighted', () => {
-    renderSelectTool()
+  it('passes the selection through so the right dot is highlighted', async () => {
+    await renderSelectTool()
 
     expect(screen.getByTestId('mock-flight-overlay')).toHaveAttribute('data-selected', '1')
   })
 
-  it('grabs the waypoint the 3d overlay reports under the cursor', () => {
+  it('grabs the waypoint the 3d overlay reports under the cursor', async () => {
     pickedIndex.value = 1
-    const props = renderSelectTool()
+    const props = await renderSelectTool()
 
     fireEvent.click(screen.getByTestId('grab-nothing'))
 
     expect(props.onHandleDragStart).toHaveBeenCalledWith(1)
   })
 
-  it('ignores a mousedown that hits no waypoint', () => {
+  it('ignores a mousedown that hits no waypoint', async () => {
     pickedIndex.value = null
-    const props = renderSelectTool()
+    const props = await renderSelectTool()
 
     fireEvent.click(screen.getByTestId('grab-corner'))
 
@@ -513,27 +533,27 @@ describe('MapView dragging waypoints at altitude', () => {
     expect(props.onHandleDragStart).not.toHaveBeenCalled()
   })
 
-  it('shows a click cursor over a waypoint so it reads as selectable', () => {
+  it('shows a click cursor over a waypoint so it reads as selectable', async () => {
     pickedIndex.value = 1
-    renderSelectTool()
+    await renderSelectTool()
 
     fireEvent.click(screen.getByTestId('move-pointer'))
 
     expect(screen.getByTestId('mock-map-root')).toHaveAttribute('data-cursor', 'pointer')
   })
 
-  it('leaves the cursor alone over open map', () => {
+  it('leaves the cursor alone over open map', async () => {
     pickedIndex.value = null
-    renderSelectTool()
+    await renderSelectTool()
 
     fireEvent.click(screen.getByTestId('move-pointer'))
 
     expect(screen.getByTestId('mock-map-root')).toHaveAttribute('data-cursor', '')
   })
 
-  it('goes back to a plain cursor once the pointer leaves the waypoint', () => {
+  it('goes back to a plain cursor once the pointer leaves the waypoint', async () => {
     pickedIndex.value = 1
-    renderSelectTool()
+    await renderSelectTool()
     fireEvent.click(screen.getByTestId('move-pointer'))
 
     pickedIndex.value = null
@@ -542,18 +562,18 @@ describe('MapView dragging waypoints at altitude', () => {
     expect(screen.getByTestId('mock-map-root')).toHaveAttribute('data-cursor', '')
   })
 
-  it('shows a grabbing cursor while a waypoint is being dragged', () => {
+  it('shows a grabbing cursor while a waypoint is being dragged', async () => {
     pickedIndex.value = 1
-    renderSelectTool()
+    await renderSelectTool()
 
     fireEvent.click(screen.getByTestId('grab-nothing'))
 
     expect(screen.getByTestId('mock-map-root')).toHaveAttribute('data-cursor', 'grabbing')
   })
 
-  it('does not consult the flat map layer for the select tool', () => {
+  it('does not consult the flat map layer for the select tool', async () => {
     pickedIndex.value = 0
-    const props = renderSelectTool()
+    const props = await renderSelectTool()
 
     fireEvent.click(screen.getByTestId('grab-corner'))
 
@@ -562,8 +582,8 @@ describe('MapView dragging waypoints at altitude', () => {
 })
 
 describe('MapView infobox', () => {
-  it('renders the infobox anchored at a waypoint', () => {
-    const { container } = render(
+  it('renders the infobox anchored at a waypoint', async () => {
+    const { container } = await renderMap(
       <MapView
         waypoints={[{ lat: 1, lng: 2 }]}
         onMapClick={() => {}}
@@ -576,8 +596,8 @@ describe('MapView infobox', () => {
     expect(container.querySelector('.map-infobox')).toHaveTextContent('Waypoint 1')
   })
 
-  it('renders no infobox when nothing is anchored', () => {
-    const { container } = render(<MapView waypoints={[{ lat: 1, lng: 2 }]} onMapClick={() => {}} />)
+  it('renders no infobox when nothing is anchored', async () => {
+    const { container } = await renderMap(<MapView waypoints={[{ lat: 1, lng: 2 }]} onMapClick={() => {}} />)
 
     expect(container.querySelector('.map-infobox')).not.toBeInTheDocument()
   })

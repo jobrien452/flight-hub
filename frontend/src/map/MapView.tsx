@@ -9,12 +9,12 @@ import { MapStyleControl } from './MapStyleControl'
 import { MAP_STYLES, useMapStyle } from './mapStyles'
 import { projectPosition, type ScreenPoint } from './projectAltitude'
 import { applyTerrain } from './terrain'
+import { useMapToken } from './useMapToken'
 import type { LngLat, ToolOverlay } from '../tools/MapTool'
 import type { Waypoint } from '../types/mission'
 import 'mapbox-gl/dist/mapbox-gl.css'
 import './MapView.css'
 
-const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN as string | undefined
 // the survey box has to stand out over satellite imagery, where a muted amber
 // disappears into dry ground
 const GHOST = '#ff8a3d'
@@ -80,6 +80,7 @@ export function MapView({
   const dragOriginRef = useRef<{ x: number; y: number } | null>(null)
   const passedThresholdRef = useRef(false)
   const [hoveringHandle, setHoveringHandle] = useState(false)
+  const { token: mapboxToken, state: tokenState } = useMapToken()
   const [hoveringWaypoint, setHoveringWaypoint] = useState(false)
   const [dragging, setDragging] = useState(false)
   const [styleId, setStyleId] = useMapStyle()
@@ -123,10 +124,14 @@ export function MapView({
   useEffect(positionInfobox, [positionInfobox])
 
 
-  if (!MAPBOX_TOKEN) {
+  if (tokenState === 'loading') {
+    return <div className="map-missing-token">Loading map...</div>
+  }
+
+  if (!mapboxToken) {
     return (
       <div className="map-missing-token">
-        Set VITE_MAPBOX_TOKEN in frontend/.env to render the map.
+        No map token available. Set MAPBOX_TOKEN on the API server.
       </div>
     )
   }
@@ -207,10 +212,10 @@ export function MapView({
 
   return (
     <div className="map-container">
-      <AddressSearch mapboxToken={MAPBOX_TOKEN} onSelect={handleAddressSelect} />
+      <AddressSearch mapboxToken={mapboxToken} onSelect={handleAddressSelect} />
       <Map
         ref={mapRef}
-        mapboxAccessToken={MAPBOX_TOKEN}
+        mapboxAccessToken={mapboxToken}
         initialViewState={{
           longitude: focus?.lng ?? -122.4194,
           latitude: focus?.lat ?? 37.7749,
