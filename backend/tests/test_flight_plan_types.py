@@ -81,3 +81,41 @@ async def test_unknown_flight_plan_type_is_rejected(client, admin_headers):
     }
     resp = await client.post("/missions", json=payload, headers=admin_headers)
     assert resp.status_code == 422
+
+
+async def test_corridor_type_mission_accepts_a_centre_line_and_settings(client, admin_headers):
+    payload = {
+        "name": "Pipeline Run",
+        "waypoints": [{"lat": 0.0, "lng": 0.0, "alt": 30}],
+        "plan_params": {
+            "type": "corridor",
+            "path": [
+                {"lat": 0.0, "lng": 0.0},
+                {"lat": 0.0, "lng": 1.0},
+            ],
+            "altitude": 30,
+            "width": 40,
+            "spacing": 20,
+        },
+    }
+    resp = await client.post("/missions", json=payload, headers=admin_headers)
+
+    assert resp.status_code == 201
+    body = resp.json()
+    assert body["plan_params"]["type"] == "corridor"
+    assert body["plan_params"]["width"] == 40
+    assert len(body["plan_params"]["path"]) == 2
+
+
+async def test_a_corridor_without_a_width_is_rejected(client, admin_headers):
+    payload = {
+        "name": "Pipeline Run",
+        "plan_params": {
+            "type": "corridor",
+            "path": [{"lat": 0.0, "lng": 0.0}, {"lat": 0.0, "lng": 1.0}],
+            "altitude": 30,
+            "spacing": 20,
+        },
+    }
+    resp = await client.post("/missions", json=payload, headers=admin_headers)
+    assert resp.status_code == 422

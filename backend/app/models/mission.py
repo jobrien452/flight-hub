@@ -49,7 +49,16 @@ class SurveyPlanParams(BaseModel):
     heading: float | None = None
 
 
-PlanParams = Union[WaypointPlanParams, SurveyPlanParams]
+class CorridorPlanParams(BaseModel):
+    # a strip either side of a centre line, for roads, pipelines and power lines
+    type: Literal["corridor"] = "corridor"
+    path: list[Waypoint]
+    altitude: float
+    width: float
+    spacing: float
+
+
+PlanParams = Union[WaypointPlanParams, SurveyPlanParams, CorridorPlanParams]
 
 
 class Mission(Document):
