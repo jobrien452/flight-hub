@@ -1,10 +1,19 @@
+import logging
 import smtplib
 from email.message import EmailMessage
 
 from app.config import settings
 
+logger = logging.getLogger(__name__)
+
 
 def _send(to_email: str, subject: str, body: str) -> None:
+    # console mode is for local work with no mailbox, the link is the whole point
+    # of these emails so logging it is enough to carry on by hand
+    if settings.email_to_console:
+        logger.info("email not sent (console mode). to=%s subject=%s\n%s", to_email, subject, body)
+        return
+
     message = EmailMessage()
     message["Subject"] = subject
     message["From"] = settings.smtp_from_email

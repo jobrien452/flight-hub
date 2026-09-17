@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.db import init_db
 from app.deps import CurrentUser, require_admin
+from app.dev_seed import seed_dev_admin
 from app.invites import sync_invites
 from app.routers import (
     api_tokens,
@@ -23,6 +24,8 @@ from app.routers import (
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_db()
+    # a way in that needs no mailbox, dev only and a no-op everywhere else
+    await seed_dev_admin()
     # picks up anyone preloaded by a migration since the last restart
     await sync_invites()
     yield
