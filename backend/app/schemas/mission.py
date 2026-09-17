@@ -10,6 +10,7 @@ class MissionCreate(BaseModel):
     # publish route and pilot reports, never by the client naming a state
     name: str
     assigned_pilot_ids: list[str] = Field(default_factory=list)
+    drone_id: str | None = None
     waypoints: list[Waypoint] = Field(default_factory=list)
     plan_params: PlanParams | None = Field(default=None, discriminator="type")
 
@@ -18,6 +19,7 @@ class MissionUpdate(BaseModel):
     # all optional, only sent fields get applied
     name: str | None = None
     assigned_pilot_ids: list[str] | None = None
+    drone_id: str | None = None
     waypoints: list[Waypoint] | None = None
     plan_params: PlanParams | None = Field(default=None, discriminator="type")
 
@@ -38,6 +40,7 @@ class MissionOut(BaseModel):
     status: MissionStatus
     owner_id: str
     assigned_pilot_ids: list[str]
+    drone_id: str | None = None
     waypoints: list[Waypoint]
     plan_params: PlanParams | None = Field(default=None, discriminator="type")
     created_at: datetime

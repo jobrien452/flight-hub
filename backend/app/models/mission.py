@@ -57,6 +57,7 @@ class Mission(Document):
     status: MissionStatus = MissionStatus.DRAFT
     owner_id: str  # id of the admin who created it
     assigned_pilot_ids: list[str] = Field(default_factory=list)
+    drone_id: str | None = None  # the aircraft booked for this flight
     # the actual flight path, manually placed or generated, always concrete points
     waypoints: list[Waypoint] = Field(default_factory=list)
     # how the waypoints above were produced, kept so settings stay editable

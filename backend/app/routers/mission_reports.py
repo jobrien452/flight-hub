@@ -4,7 +4,9 @@ from beanie import PydanticObjectId
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.deps import CurrentUser, get_current_user
+from app.fleet import log_flight_time, log_mission_flown, set_drone_status
 from app.mission_access import get_owned_mission
+from app.models.drone import DroneStatus
 from app.models.mission import OPEN_STATUSES, Mission, MissionStatus
 from app.models.mission_report import MissionReport, MissionReportStatus
 from app.models.user import Role
@@ -35,6 +37,19 @@ async def _complete_if_everyone_reported(mission_id: str) -> None:
     mission.status = MissionStatus.COMPLETED
     mission.updated_at = datetime.now(timezone.utc)
     await mission.save()
+
+    # the job is over, so the aircraft comes back into the pool with one more flight on it
+    await set_drone_status(mission.drone_id, DroneStatus.AVAILABLE)
+    await log_mission_flown(mission.drone_id)
+
+
+async def _on_submitted(mission_id: str, report: MissionReport) -> None:
+    mission = await Mission.get(PydanticObjectId(mission_id))
+    if mission is not None:
+        minutes = report.data.get("duration_minutes")
+        if isinstance(minutes, (int, float)):
+            await log_flight_time(mission.drone_id, float(minutes))
+    await _complete_if_everyone_reported(mission_id)
 
 
 async def _get_own_report(mission_id: str, report_id: str, current_user: CurrentUser) -> MissionReport:
@@ -80,7 +95,13 @@ async def create_report(
     report = MissionReport(
         mission_id=mission_id, pilot_id=current_user.user_id, **payload.model_dump()
     )
+    if report.status == MissionReportStatus.SUBMITTED:
+        report.submitted_at = report.updated_at
     await report.insert()
+
+    # a pilot can file and submit in one go, that still finishes the mission
+    if report.status == MissionReportStatus.SUBMITTED:
+        await _on_submitted(mission_id, report)
     return _out(report)
 
 
@@ -103,5 +124,5 @@ async def update_report(
     await report.save()
 
     if report.status == MissionReportStatus.SUBMITTED:
-        await _complete_if_everyone_reported(mission_id)
+        await _on_submitted(mission_id, report)
     return _out(report)

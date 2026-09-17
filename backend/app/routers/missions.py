@@ -5,7 +5,10 @@ from beanie import PydanticObjectId
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.deps import CurrentUser, get_current_user, require_admin
+from app.drone_access import get_owned_drone
 from app.email_client import send_mission_assigned_email, send_mission_unassigned_email
+from app.fleet import set_drone_status
+from app.models.drone import DroneStatus
 from app.mission_access import get_owned_mission
 from app.models.mission import (
     ACKNOWLEDGEABLE,
@@ -90,6 +93,9 @@ async def update_mission(
 ) -> MissionOut:
     mission = await get_owned_mission(mission_id, current_user)
     updates = payload.model_dump(exclude_unset=True)
+    # booking an aircraft only works out of your own fleet
+    if updates.get("drone_id"):
+        await get_owned_drone(updates["drone_id"], current_user)
     for field, value in updates.items():
         setattr(mission, field, value)
     mission.updated_at = datetime.now(timezone.utc)
@@ -151,7 +157,10 @@ async def acknowledge_mission(
 async def start_mission(
     mission_id: str, current_user: CurrentUser = Depends(get_current_user)
 ) -> MissionOut:
-    return await _pilot_advance(mission_id, current_user, STARTABLE, MissionStatus.IN_FLIGHT)
+    out = await _pilot_advance(mission_id, current_user, STARTABLE, MissionStatus.IN_FLIGHT)
+    # the digital twin follows the mission, the aircraft is up once the flight starts
+    await set_drone_status(out.drone_id, DroneStatus.IN_FLIGHT)
+    return out
 
 
 @router.post("/{mission_id}/assignments", response_model=MissionOut)

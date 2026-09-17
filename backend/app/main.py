@@ -7,7 +7,7 @@ from app.config import settings
 from app.db import init_db
 from app.deps import CurrentUser, require_admin
 from app.invites import sync_invites
-from app.routers import api_tokens, auth, me, mission_reports, missions, users
+from app.routers import api_tokens, auth, drones, me, mission_reports, missions, users
 
 
 @asynccontextmanager
@@ -42,6 +42,7 @@ app.add_middleware(
 app.include_router(auth.router, include_in_schema=False)
 app.include_router(api_tokens.router, include_in_schema=False)
 app.include_router(missions.router)
+app.include_router(drones.router)
 app.include_router(mission_reports.router)
 app.include_router(me.router)
 app.include_router(users.router)
