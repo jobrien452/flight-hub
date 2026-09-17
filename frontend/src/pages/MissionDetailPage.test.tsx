@@ -87,6 +87,22 @@ describe('MissionDetailPage', () => {
     expect(screen.queryByRole('link', { name: 'Plan' })).not.toBeInTheDocument()
   })
 
+  it('gives a pilot their flight actions', async () => {
+    serveMission({ status: 'published' })
+    renderPage(pilotSession)
+
+    expect(await screen.findByRole('button', { name: 'Acknowledge' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Start flight' })).toBeInTheDocument()
+  })
+
+  it('keeps the flight actions away from admins', async () => {
+    serveMission({ status: 'published' })
+    renderPage(adminSession)
+    await screen.findByRole('heading', { name: fixtureMission.name })
+
+    expect(screen.queryByRole('button', { name: 'Start flight' })).not.toBeInTheDocument()
+  })
+
   it('shows the plan summary', async () => {
     renderPage(adminSession)
     await screen.findByRole('heading', { name: fixtureMission.name })

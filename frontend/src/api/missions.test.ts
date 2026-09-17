@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import {
+  acknowledgeMission,
   assignPilot,
   createMission,
   deleteMission,
   getMission,
   listMissions,
   publishMission,
+  startMission,
   unassignPilot,
   updateMission,
 } from './missions'
@@ -69,5 +71,19 @@ describe('unassignPilot', () => {
   it('returns the mission with the pilot removed', async () => {
     const mission = await unassignPilot(fixtureMission.id, 'pilot-1', 'Weather scrubbed it', token)
     expect(mission.assigned_pilot_ids).not.toContain('pilot-1')
+  })
+})
+
+describe('acknowledgeMission', () => {
+  it('moves the mission to acknowledged', async () => {
+    const mission = await acknowledgeMission(fixtureMission.id, token)
+    expect(mission.status).toBe('acknowledged')
+  })
+})
+
+describe('startMission', () => {
+  it('moves the mission to in flight', async () => {
+    const mission = await startMission(fixtureMission.id, token)
+    expect(mission.status).toBe('in_flight')
   })
 })

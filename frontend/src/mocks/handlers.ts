@@ -103,6 +103,14 @@ export const handlers = [
     HttpResponse.json({ ...fixtureMission, status: 'published' }),
   ),
 
+  http.post(`${API_URL}/missions/:id/acknowledge`, () =>
+    HttpResponse.json({ ...fixtureMission, status: 'acknowledged' }),
+  ),
+
+  http.post(`${API_URL}/missions/:id/start`, () =>
+    HttpResponse.json({ ...fixtureMission, status: 'in_flight' }),
+  ),
+
   http.post(`${API_URL}/missions/:id/assignments`, async ({ request }) => {
     const body = (await request.json()) as { pilot_id: string }
     return HttpResponse.json({

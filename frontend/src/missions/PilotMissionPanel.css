@@ -1,0 +1,81 @@
+.pilot-panel {
+  margin-top: 20px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--panel);
+}
+
+.pilot-panel h2 {
+  font-size: 15px;
+  margin: 0 0 10px;
+}
+
+.pilot-panel-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.pilot-report-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.pilot-report-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 10px;
+}
+
+.pilot-report-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-dim);
+}
+
+.pilot-report-form input,
+.pilot-report-form textarea {
+  font: inherit;
+  text-transform: none;
+  letter-spacing: normal;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 6px 8px;
+}
+
+.pilot-report-form textarea {
+  resize: vertical;
+}
+
+.pilot-report-filed dl {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 4px 12px;
+  margin: 8px 0 0;
+}
+
+.pilot-report-filed dt {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-dim);
+}
+
+.pilot-report-filed dd {
+  margin: 0 0 8px;
+  font-size: 15px;
+}
+
+.pilot-report-notes {
+  margin: 0;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+  font-size: 13px;
+}

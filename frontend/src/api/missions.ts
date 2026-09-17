@@ -62,3 +62,12 @@ export async function unassignPilot(
     body: JSON.stringify({ message }),
   })
 }
+
+// the pilot's own moves through the state machine, an admin gets a 403 on both
+export async function acknowledgeMission(id: string, token: string): Promise<Mission> {
+  return apiFetch<Mission>(`/missions/${id}/acknowledge`, token, { method: 'POST' })
+}
+
+export async function startMission(id: string, token: string): Promise<Mission> {
+  return apiFetch<Mission>(`/missions/${id}/start`, token, { method: 'POST' })
+}
