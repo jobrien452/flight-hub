@@ -7,7 +7,12 @@ import {
   transformRotate,
 } from '@turf/turf'
 import type { Position } from 'geojson'
-import type { SurveyPlanParams, Waypoint, WaypointPlanParams } from '../types/mission'
+import type {
+  CorridorPlanParams,
+  SurveyPlanParams,
+  Waypoint,
+  WaypointPlanParams,
+} from '../types/mission'
 
 function toPosition(w: Waypoint): Position {
   return [w.lng, w.lat]
@@ -88,4 +93,42 @@ export function generateSurveyPlan(params: SurveyPlanParams): Waypoint[] {
   )
 
   return flightLine.geometry.coordinates.map((pos) => toWaypoint(pos, altitude))
+}
+
+
+// how far off the centre line each pass runs, spread evenly across the width
+function corridorOffsets(width: number, spacing: number): number[] {
+  if (width <= 0 || spacing <= 0) return [0]
+  const passes = Math.max(2, Math.floor(width / spacing) + 1)
+  const step = width / (passes - 1)
+  return Array.from({ length: passes }, (_, i) => -width / 2 + i * step)
+}
+
+// the direction of travel at a vertex, taken from the segment it sits on
+function headingAt(path: Waypoint[], index: number): number {
+  const from = index === 0 ? path[0] : path[index - 1]
+  const to = index === 0 ? path[1] : path[index]
+  return turfBearing(toPosition(from), toPosition(to))
+}
+
+function offsetVertex(path: Waypoint[], index: number, offset: number, altitude: number): Waypoint {
+  if (offset === 0) return { ...path[index], alt: altitude }
+  // square to the direction of travel, left or right depending on the sign
+  const across = headingAt(path, index) + (offset > 0 ? 90 : -90)
+  const moved = turfDestination(toPosition(path[index]), Math.abs(offset), across, {
+    units: 'meters',
+  })
+  return toWaypoint(moved.geometry.coordinates, altitude)
+}
+
+// parallel passes along a centre line, alternating direction so the aircraft
+// turns at the end of a pass rather than flying back empty
+export function generateCorridorPlan(params: CorridorPlanParams): Waypoint[] {
+  const { path, altitude, width, spacing } = params
+  if (path.length < 2) return []
+
+  return corridorOffsets(width, spacing).flatMap((offset, pass) => {
+    const line = path.map((_, index) => offsetVertex(path, index, offset, altitude))
+    return pass % 2 === 0 ? line : line.reverse()
+  })
 }

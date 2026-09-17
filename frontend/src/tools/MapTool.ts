@@ -1,5 +1,10 @@
 import { snapToRectangle } from './snapRectangle'
-import type { SurveyPlanParams, Waypoint, WaypointPlanParams } from '../types/mission'
+import type {
+  CorridorPlanParams,
+  SurveyPlanParams,
+  Waypoint,
+  WaypointPlanParams,
+} from '../types/mission'
 
 export interface LngLat {
   lng: number
@@ -183,9 +188,62 @@ export function createRectangleSurveyTool(
   }
 }
 
+export interface CorridorSettings {
+  altitude: number
+  width: number
+  spacing: number
+}
+
+// clicks trace the centre line of a road, pipeline or power line. the passes
+// either side of it come later, from the editor's "Generate Corridor" step
+export function createCorridorTool(
+  getSettings: () => CorridorSettings,
+  onChange: (waypoints: Waypoint[], planParams: CorridorPlanParams) => void,
+): MapTool {
+  let path: Waypoint[] = []
+  let dragging: number | null = null
+
+  // one point is not a line yet, so nothing is committed until the second click
+  function commit() {
+    if (path.length < 2) return
+    onChange(path, { type: 'corridor', path, ...getSettings() })
+  }
+
+  return {
+    id: 'corridor',
+    label: 'Corridor',
+    icon: 'line',
+    onActivate: () => {
+      path = []
+      dragging = null
+    },
+    onDeactivate: () => {
+      dragging = null
+    },
+    onMapClick: (point) => {
+      path = [...path, { lat: point.lat, lng: point.lng }]
+      commit()
+    },
+    onHandleDragStart: (index) => {
+      dragging = index
+    },
+    onHandleDrag: (point) => {
+      if (dragging === null) return
+      path = path.map((w, i) => (i === dragging ? { lat: point.lat, lng: point.lng } : w))
+      commit()
+    },
+    onHandleDragEnd: () => {
+      dragging = null
+    },
+    // the line as placed, each vertex grabbable so it can be nudged onto the route
+    renderOverlay: () => ({ markers: path, ghost: path, draggable: true }),
+  }
+}
+
 // default registry the toolbar renders from, add a new tool here to expose it
 export const mapTools: MapTool[] = [
   createWaypointTool(() => ({ altitude: 50 }), () => [], () => {}),
   createRectangleSurveyTool(() => ({ altitude: 50, spacing: 20 }), () => {}),
+  createCorridorTool(() => ({ altitude: 50, width: 40, spacing: 20 }), () => {}),
   createSelectTool({ onSelect: () => {}, onMove: () => {} }),
 ]

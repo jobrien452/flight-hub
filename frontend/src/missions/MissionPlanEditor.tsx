@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { MapView } from '../map/MapView'
-import { generateSurveyPlan } from '../planning/flightPlanGenerators'
+import { generateCorridorPlan, generateSurveyPlan } from '../planning/flightPlanGenerators'
 import {
+  createCorridorTool,
   createRectangleSurveyTool,
   createSelectTool,
   createWaypointTool,
@@ -13,7 +14,7 @@ import type { Mission, PlanParams, Waypoint } from '../types/mission'
 import { WaypointDrawer } from './WaypointDrawer'
 import './MissionPlanEditor.css'
 
-type ToolId = 'waypoint' | 'rectangle_survey' | 'select'
+type ToolId = 'waypoint' | 'rectangle_survey' | 'corridor' | 'select'
 
 export interface MissionPlanEditorValue {
   name: string
@@ -49,20 +50,22 @@ export function MissionPlanEditor({
   const [activeToolId, setActiveToolId] = useState<ToolId>('select')
   const [altitude, setAltitude] = useState(50)
   const [spacing, setSpacing] = useState(20)
-  const [surveyGenerated, setSurveyGenerated] = useState(false)
+  const [corridorWidth, setCorridorWidth] = useState(40)
+  const [planGenerated, setPlanGenerated] = useState(false)
   const [overlay, setOverlay] = useState<ToolOverlay>({ markers: [] })
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
   const [drawerOpen, setDrawerOpen] = useState(false)
 
   // tools are built once and read these through the refs, so changing the
   // altitude doesn't rebuild them and wipe out what's already been placed
-  const settingsRef = useRef({ altitude, spacing })
+  const settingsRef = useRef({ altitude, spacing, width: corridorWidth })
   const waypointsRef = useRef(waypoints)
 
   useEffect(() => {
     settingsRef.current.altitude = altitude
     settingsRef.current.spacing = spacing
-  }, [altitude, spacing])
+    settingsRef.current.width = corridorWidth
+  }, [altitude, spacing, corridorWidth])
 
   useEffect(() => {
     waypointsRef.current = waypoints
@@ -85,7 +88,13 @@ export function MissionPlanEditor({
         // points here are just the snapped box outline, not a generated sweep yet
         setWaypoints(points)
         setPlanParams(params)
-        setSurveyGenerated(false)
+        setPlanGenerated(false)
+      }),
+      corridor: createCorridorTool(getSettings, (points, params) => {
+        // the traced centre line, the passes either side come from Generate Corridor
+        setWaypoints(points)
+        setPlanParams(params)
+        setPlanGenerated(false)
       }),
       select: createSelectTool({
         onSelect: setSelectedIndex,
@@ -139,7 +148,16 @@ export function MissionPlanEditor({
     const params = { ...planParams, altitude, spacing }
     setWaypoints(generateSurveyPlan(params))
     setPlanParams(params)
-    setSurveyGenerated(true)
+    setPlanGenerated(true)
+  }
+
+  // same two step shape as the survey, the traced line is not a flight plan yet
+  function handleGenerateCorridor() {
+    if (planParams?.type !== 'corridor') return
+    const params = { ...planParams, altitude, spacing, width: corridorWidth }
+    setWaypoints(generateCorridorPlan(params))
+    setPlanParams(params)
+    setPlanGenerated(true)
   }
 
   function handleWaypointChange(changes: Partial<Waypoint>) {
@@ -203,6 +221,13 @@ export function MissionPlanEditor({
             >
               Rectangle Survey
             </button>
+            <button
+              type="button"
+              className={activeToolId === 'corridor' ? 'active' : ''}
+              onClick={() => handleToolSelect('corridor')}
+            >
+              Corridor
+            </button>
           </div>
           {activeToolId !== 'select' && (
             <label>
@@ -214,13 +239,23 @@ export function MissionPlanEditor({
               />
             </label>
           )}
-          {activeToolId === 'rectangle_survey' && (
+          {(activeToolId === 'rectangle_survey' || activeToolId === 'corridor') && (
             <label>
               Line spacing (m)
               <input
                 type="number"
                 value={spacing}
                 onChange={(e) => setSpacing(Number(e.target.value))}
+              />
+            </label>
+          )}
+          {activeToolId === 'corridor' && (
+            <label>
+              Corridor width (m)
+              <input
+                type="number"
+                value={corridorWidth}
+                onChange={(e) => setCorridorWidth(Number(e.target.value))}
               />
             </label>
           )}
@@ -232,9 +267,18 @@ export function MissionPlanEditor({
               Generate Survey
             </button>
           )}
-          {planParams?.type === 'survey' && !surveyGenerated ? (
+          {planParams?.type === 'corridor' && (
+            <button type="button" onClick={handleGenerateCorridor}>
+              Generate Corridor
+            </button>
+          )}
+          {planParams?.type === 'survey' && !planGenerated && (
             <p className="text-dim mono">box placed, click Generate Survey</p>
-          ) : (
+          )}
+          {planParams?.type === 'corridor' && !planGenerated && (
+            <p className="text-dim mono">line traced, click Generate Corridor</p>
+          )}
+          {(planGenerated || (planParams?.type !== 'survey' && planParams?.type !== 'corridor')) && (
             <p className="text-dim mono">{waypoints.length} waypoints</p>
           )}
         </fieldset>

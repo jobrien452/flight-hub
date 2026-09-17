@@ -28,7 +28,16 @@ export interface SurveyPlanParams {
   heading?: number
 }
 
-export type PlanParams = WaypointPlanParams | SurveyPlanParams
+// a strip of ground either side of a line, for roads, pipelines and power lines
+export interface CorridorPlanParams {
+  type: 'corridor'
+  path: Waypoint[]
+  altitude: number
+  width: number
+  spacing: number
+}
+
+export type PlanParams = WaypointPlanParams | SurveyPlanParams | CorridorPlanParams
 
 export interface Mission {
   id: string

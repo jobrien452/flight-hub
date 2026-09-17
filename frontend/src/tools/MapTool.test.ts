@@ -1,7 +1,13 @@
 ﻿import { distance } from '@turf/turf'
 import { describe, expect, it, vi } from 'vitest'
-import type { Waypoint } from '../types/mission'
-import { createRectangleSurveyTool, createSelectTool, createWaypointTool, mapTools } from './MapTool'
+import type { CorridorPlanParams, Waypoint } from '../types/mission'
+import {
+  createCorridorTool,
+  createRectangleSurveyTool,
+  createSelectTool,
+  createWaypointTool,
+  mapTools,
+} from './MapTool'
 
 describe('tool registry', () => {
   it('exposes a waypoint tool', () => {
@@ -10,6 +16,10 @@ describe('tool registry', () => {
 
   it('exposes a rectangle survey tool', () => {
     expect(mapTools.some((t) => t.id === 'rectangle_survey')).toBe(true)
+  })
+
+  it('exposes a corridor tool', () => {
+    expect(mapTools.some((t) => t.id === 'corridor')).toBe(true)
   })
 
   it('exposes a select tool', () => {
@@ -234,3 +244,65 @@ describe('rectangle survey overlay', () => {
   })
 })
 
+
+describe('corridor tool', () => {
+  const settings = { altitude: 40, width: 20, spacing: 10 }
+
+  it('builds up the centre line click by click', () => {
+    const onChange = vi.fn()
+    const tool = createCorridorTool(() => settings, onChange)
+
+    tool.onMapClick({ lng: 1, lat: 2 })
+    tool.onMapClick({ lng: 3, lat: 4 })
+
+    const [points, params] = onChange.mock.calls.at(-1) as [Waypoint[], CorridorPlanParams]
+    expect(points).toHaveLength(2)
+    expect(params.type).toBe('corridor')
+    expect(params.path).toHaveLength(2)
+    expect(params.width).toBe(20)
+  })
+
+  it('says nothing until there is a line to fly', () => {
+    const onChange = vi.fn()
+    const tool = createCorridorTool(() => settings, onChange)
+
+    tool.onMapClick({ lng: 1, lat: 2 })
+
+    expect(onChange).not.toHaveBeenCalled()
+  })
+
+  it('draws the points placed so far as draggable handles', () => {
+    const tool = createCorridorTool(() => settings, vi.fn())
+
+    tool.onMapClick({ lng: 1, lat: 2 })
+    tool.onMapClick({ lng: 3, lat: 4 })
+
+    const overlay = tool.renderOverlay()
+    expect(overlay.markers).toHaveLength(2)
+    expect(overlay.draggable).toBe(true)
+  })
+
+  it('moves the vertex being dragged and leaves the rest alone', () => {
+    const onChange = vi.fn()
+    const tool = createCorridorTool(() => settings, onChange)
+    tool.onMapClick({ lng: 1, lat: 2 })
+    tool.onMapClick({ lng: 3, lat: 4 })
+
+    tool.onHandleDragStart(0)
+    tool.onHandleDrag({ lng: 9, lat: 9 })
+    tool.onHandleDragEnd()
+
+    const [, params] = onChange.mock.calls.at(-1) as [Waypoint[], CorridorPlanParams]
+    expect(params.path[0]).toMatchObject({ lng: 9, lat: 9 })
+    expect(params.path[1]).toMatchObject({ lng: 3, lat: 4 })
+  })
+
+  it('starts a fresh line when it is activated again', () => {
+    const tool = createCorridorTool(() => settings, vi.fn())
+    tool.onMapClick({ lng: 1, lat: 2 })
+
+    tool.onActivate()
+
+    expect(tool.renderOverlay().markers).toHaveLength(0)
+  })
+})

@@ -434,3 +434,73 @@ describe('MissionPlanEditor publishing', () => {
 })
 
 
+
+describe('corridor tool', () => {
+  async function traceCorridor() {
+    renderEditor()
+    await userEvent.click(screen.getByRole('button', { name: 'Corridor' }))
+    await userEvent.click(screen.getByRole('button', { name: 'click A' }))
+    await userEvent.click(screen.getByRole('button', { name: 'click B' }))
+  }
+
+  it('sits in the toolbar alongside the other tools', () => {
+    renderEditor()
+    expect(screen.getByRole('button', { name: 'Corridor' })).toBeInTheDocument()
+  })
+
+  it('asks for a corridor width once the tool is picked', async () => {
+    renderEditor()
+    await userEvent.click(screen.getByRole('button', { name: 'Corridor' }))
+
+    expect(screen.getByLabelText(/corridor width/i)).toBeInTheDocument()
+  })
+
+  it('waits for the line to be traced before offering to generate', async () => {
+    renderEditor()
+    await userEvent.click(screen.getByRole('button', { name: 'Corridor' }))
+
+    expect(screen.queryByRole('button', { name: 'Generate Corridor' })).not.toBeInTheDocument()
+  })
+
+  it('offers to generate once the line has two points', async () => {
+    await traceCorridor()
+
+    expect(await screen.findByRole('button', { name: 'Generate Corridor' })).toBeInTheDocument()
+    expect(screen.getByText('line traced, click Generate Corridor')).toBeInTheDocument()
+  })
+
+  it('turns the line into passes across the corridor', async () => {
+    await traceCorridor()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Generate Corridor' }))
+
+    // the centre line and one pass either side of it, over two points each
+    expect(await screen.findByText('6 waypoints')).toBeInTheDocument()
+  })
+
+  it('hands the generated plan back on save', async () => {
+    const onSubmit = vi.fn()
+    render(
+      <MemoryRouter>
+        <AuthProvider>
+          <MissionPlanEditor
+            submitting={false}
+            error={null}
+            submitLabel="Create Mission"
+            onSubmit={onSubmit}
+          />
+        </AuthProvider>
+      </MemoryRouter>,
+    )
+    await userEvent.click(screen.getByRole('button', { name: 'Corridor' }))
+    await userEvent.click(screen.getByRole('button', { name: 'click A' }))
+    await userEvent.click(screen.getByRole('button', { name: 'click B' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Generate Corridor' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Create Mission' }))
+
+    const value = onSubmit.mock.calls.at(-1)?.[0]
+    expect(value.planParams.type).toBe('corridor')
+    expect(value.planParams.path).toHaveLength(2)
+    expect(value.waypoints).toHaveLength(6)
+  })
+})
