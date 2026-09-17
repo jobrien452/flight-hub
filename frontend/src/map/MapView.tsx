@@ -233,7 +233,11 @@ export function MapView({
               ? 'pointer'
               : hoveringHandle
                 ? 'grab'
-                : undefined
+                : // a reticle while a tool is still taking points, so it is obvious
+                  // the next click drops something rather than just panning
+                  overlay?.placing
+                  ? 'crosshair'
+                  : undefined
         }
         interactiveLayerIds={overlay?.draggable ? ['overlay-corners'] : undefined}
         onClick={handleClick}

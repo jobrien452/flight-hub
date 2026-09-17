@@ -11,10 +11,22 @@ import {
   type ToolOverlay,
 } from '../tools/MapTool'
 import type { Mission, PlanParams, Waypoint } from '../types/mission'
+import { ToolIcon } from './ToolIcon'
 import { WaypointDrawer } from './WaypointDrawer'
 import './MissionPlanEditor.css'
 
 type ToolId = 'waypoint' | 'rectangle_survey' | 'corridor' | 'select'
+
+// toolbar order, select first since it is what the editor opens on
+const TOOL_ORDER: ToolId[] = ['select', 'waypoint', 'rectangle_survey', 'corridor']
+
+// the glyph says which tool, this says what it actually does
+const TOOL_HELP: Record<ToolId, string> = {
+  select: 'Pick a waypoint to move, edit or delete',
+  waypoint: 'Drop waypoints one at a time',
+  rectangle_survey: 'Four clicks to box an area, then generate the sweep',
+  corridor: 'Trace a line, then generate passes either side of it',
+}
 
 export interface MissionPlanEditorValue {
   name: string
@@ -200,34 +212,21 @@ export function MissionPlanEditor({
         <fieldset>
           <legend>Tool</legend>
           <div className="tool-row">
-            <button
-              type="button"
-              className={activeToolId === 'select' ? 'active' : ''}
-              onClick={() => handleToolSelect('select')}
-            >
-              Select
-            </button>
-            <button
-              type="button"
-              className={activeToolId === 'waypoint' ? 'active' : ''}
-              onClick={() => handleToolSelect('waypoint')}
-            >
-              Waypoint
-            </button>
-            <button
-              type="button"
-              className={activeToolId === 'rectangle_survey' ? 'active' : ''}
-              onClick={() => handleToolSelect('rectangle_survey')}
-            >
-              Rectangle Survey
-            </button>
-            <button
-              type="button"
-              className={activeToolId === 'corridor' ? 'active' : ''}
-              onClick={() => handleToolSelect('corridor')}
-            >
-              Corridor
-            </button>
+            {TOOL_ORDER.map((id) => (
+              <button
+                key={id}
+                type="button"
+                className={activeToolId === id ? 'active' : ''}
+                aria-label={tools[id].label}
+                aria-describedby={`tool-help-${id}`}
+                onClick={() => handleToolSelect(id)}
+              >
+                <ToolIcon name={tools[id].icon} />
+                <span className="tool-help" id={`tool-help-${id}`} role="tooltip">
+                  {TOOL_HELP[id]}
+                </span>
+              </button>
+            ))}
           </div>
           {activeToolId !== 'select' && (
             <label>

@@ -504,3 +504,37 @@ describe('corridor tool', () => {
     expect(value.waypoints).toHaveLength(6)
   })
 })
+
+describe('tool buttons', () => {
+  it('shows each tool as a glyph rather than a wrapping label', () => {
+    renderEditor()
+
+    for (const name of ['Select', 'Waypoint', 'Rectangle Survey', 'Corridor']) {
+      const button = screen.getByRole('button', { name })
+      expect(button).toBeInTheDocument()
+      // the label is the accessible name, the visible part is the icon
+      expect(button.querySelector('svg')).toBeInTheDocument()
+      expect(button.textContent).not.toBe(name)
+    }
+  })
+
+  it('explains what each tool does in a tooltip', () => {
+    renderEditor()
+
+    expect(screen.getByRole('button', { name: 'Rectangle Survey' })).toHaveTextContent(
+      /four clicks/i,
+    )
+    expect(screen.getByRole('button', { name: 'Corridor' })).toHaveTextContent(/trace a line/i)
+    expect(screen.getByRole('button', { name: 'Waypoint' })).toHaveTextContent(/one at a time/i)
+    expect(screen.getByRole('button', { name: 'Select' })).toHaveTextContent(/move/i)
+  })
+
+  it('points the tooltip at the button for a screen reader too', () => {
+    renderEditor()
+    const button = screen.getByRole('button', { name: 'Corridor' })
+
+    const describedBy = button.getAttribute('aria-describedby')
+    expect(describedBy).toBeTruthy()
+    expect(document.getElementById(describedBy as string)).toHaveTextContent(/trace a line/i)
+  })
+})

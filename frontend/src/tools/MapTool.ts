@@ -23,6 +23,9 @@ export interface ToolOverlay {
   // the plan's own waypoints are the handles. they are drawn at altitude by the
   // 3d overlay, so hit testing has to go through it rather than a flat map layer
   dragsPlanWaypoints?: boolean
+  // the tool is still expecting clicks that place something, which the map turns
+  // into a reticle. false once a click would no longer add to what is being built
+  placing?: boolean
 }
 
 // common shape for anything on the toolbar, new tools just implement this
@@ -68,8 +71,9 @@ export function createWaypointTool(
     onHandleDragStart: () => {},
     onHandleDrag: () => {},
     onHandleDragEnd: () => {},
-    // every click lands straight in the plan, so there is no draft to preview
-    renderOverlay: () => ({ markers: [] }),
+    // every click lands straight in the plan, so there is no draft to preview,
+    // and there is always another point to place
+    renderOverlay: () => ({ markers: [], placing: true }),
   }
 }
 
@@ -180,11 +184,12 @@ export function createRectangleSurveyTool(
       anchor = null
     },
     // corners as they go down, then the snapped box so you can see where it
-    // landed versus where you clicked
+    // landed versus where you clicked. a placed box takes no more corners, the
+    // next click starts a new one
     renderOverlay: () =>
       boundary.length > 0
-        ? { markers: boundary, ghost: boundary, draggable: true }
-        : { markers: corners.map(({ lat, lng }) => ({ lat, lng })) },
+        ? { markers: boundary, ghost: boundary, draggable: true, placing: false }
+        : { markers: corners.map(({ lat, lng }) => ({ lat, lng })), placing: true },
   }
 }
 
@@ -235,8 +240,9 @@ export function createCorridorTool(
     onHandleDragEnd: () => {
       dragging = null
     },
-    // the line as placed, each vertex grabbable so it can be nudged onto the route
-    renderOverlay: () => ({ markers: path, ghost: path, draggable: true }),
+    // the line as placed, each vertex grabbable so it can be nudged onto the
+    // route. a corridor is never finished, another click always extends it
+    renderOverlay: () => ({ markers: path, ghost: path, draggable: true, placing: true }),
   }
 }
 

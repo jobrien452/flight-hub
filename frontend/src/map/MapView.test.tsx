@@ -602,3 +602,39 @@ describe('MapView infobox', () => {
     expect(container.querySelector('.map-infobox')).not.toBeInTheDocument()
   })
 })
+
+describe('placement cursor', () => {
+  it('shows a reticle while a tool is still waiting for points', async () => {
+    await renderMap(
+      <MapView waypoints={[]} onMapClick={() => {}} overlay={{ markers: [], placing: true }} />,
+    )
+
+    expect(screen.getByTestId('mock-map-root')).toHaveAttribute('data-cursor', 'crosshair')
+  })
+
+  it('drops the reticle once the tool has what it needs', async () => {
+    await renderMap(
+      <MapView waypoints={[]} onMapClick={() => {}} overlay={{ markers: [], placing: false }} />,
+    )
+
+    expect(screen.getByTestId('mock-map-root')).toHaveAttribute('data-cursor', '')
+  })
+
+  it('still prefers the grab cursor over a handle while placing', async () => {
+    const box = [
+      { lat: 1, lng: 1 },
+      { lat: 1, lng: 2 },
+    ]
+    await renderMap(
+      <MapView
+        waypoints={[]}
+        onMapClick={() => {}}
+        overlay={{ markers: box, draggable: true, placing: true }}
+      />,
+    )
+
+    fireEvent.click(screen.getByTestId('enter-layer'))
+
+    expect(screen.getByTestId('mock-map-root')).toHaveAttribute('data-cursor', 'grab')
+  })
+})

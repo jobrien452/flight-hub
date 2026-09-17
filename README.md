@@ -5,8 +5,6 @@ An admin draws a flight plan on a 3d map, publishes it, then assigns pilots and 
 drone to it. The pilot picks it up, flies it and files a report. The mission closes
 itself once every assigned pilot has reported, and the drone's hours go up with it.
 
-Live at https://www.jakeobrien.dev
-
 Built so far:
 
 - Waypoint, rectangle survey and corridor tools, sweeps generated client side with turf
@@ -59,6 +57,14 @@ What you need locally:
 
 Local Deployment
 
+```cp backend/.env.dev.example backend/.env```
+
+```docker compose up --build -d```
+
+For more granular controls of the system check the .env file for the backend
+
+Frontend env file only contains the api url and need much less configuration
+
 Dev Notes:
 
 Accessible api - this read api tokens to me
@@ -69,22 +75,3 @@ Two users types - Types is roles/enums
 
 Android apps contacting our service login/token
 Permanent state updates in database (worded interestingly may need to consider SQL over NOSQL)
-
-Views needed:
-    Admin panel - assign missions to pilot (need list of pilots), need db tracking of what pilot is assigned to what mission
-        questions:
-        possibility of multiple pilots flying a mission?
-        are plans stale after flight?
-
-    Organization management page - admins create and manage their orgs but who manages the org admins (outside of scope but possibility for super admin [aka flyby eng] to have purview over client admins)
-        questions:
-            how are we tracking users in an org? email domain, special sign up link, admin intervention over a user with no assignment?
-
-    Fleet Managment - 
-        digital twin of all drones in fleet
-        questions:
-            are drones org dependent?
-
-    General Data dashboard -
-        somewhat nebulous but display of data collected for pilots, drones etc
-        (may be able to reuse some code from fleet management since that panel also displays data from drones)

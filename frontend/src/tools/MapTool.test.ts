@@ -306,3 +306,55 @@ describe('corridor tool', () => {
     expect(tool.renderOverlay().markers).toHaveLength(0)
   })
 })
+
+describe('placement state', () => {
+  it('keeps the waypoint tool in placing mode, every click adds another', () => {
+    const tool = createWaypointTool(() => ({ altitude: 50 }), () => [], vi.fn())
+
+    expect(tool.renderOverlay().placing).toBe(true)
+  })
+
+  it('keeps the corridor tool in placing mode, the line is never finished', () => {
+    const tool = createCorridorTool(() => ({ altitude: 40, width: 20, spacing: 10 }), vi.fn())
+    tool.onMapClick({ lng: 1, lat: 2 })
+    tool.onMapClick({ lng: 3, lat: 4 })
+
+    expect(tool.renderOverlay().placing).toBe(true)
+  })
+
+  it('takes the rectangle tool out of placing mode once the box is down', () => {
+    const tool = createRectangleSurveyTool(() => ({ altitude: 50, spacing: 20 }), vi.fn())
+
+    expect(tool.renderOverlay().placing).toBe(true)
+    tool.onMapClick({ lng: 0, lat: 0 })
+    tool.onMapClick({ lng: 0.002, lat: 0 })
+    tool.onMapClick({ lng: 0.002, lat: 0.002 })
+    expect(tool.renderOverlay().placing).toBe(true)
+
+    tool.onMapClick({ lng: 0, lat: 0.002 })
+
+    expect(tool.renderOverlay().placing).toBe(false)
+  })
+
+  it('goes back to placing when a click starts a fresh box', () => {
+    const tool = createRectangleSurveyTool(() => ({ altitude: 50, spacing: 20 }), vi.fn())
+    for (const p of [
+      { lng: 0, lat: 0 },
+      { lng: 0.002, lat: 0 },
+      { lng: 0.002, lat: 0.002 },
+      { lng: 0, lat: 0.002 },
+    ]) {
+      tool.onMapClick(p)
+    }
+
+    tool.onMapClick({ lng: 5, lat: 5 })
+
+    expect(tool.renderOverlay().placing).toBe(true)
+  })
+
+  it('leaves the select tool out of it, it places nothing', () => {
+    const tool = createSelectTool({ onSelect: vi.fn(), onMove: vi.fn() })
+
+    expect(tool.renderOverlay().placing).toBeFalsy()
+  })
+})
