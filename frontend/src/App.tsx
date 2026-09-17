@@ -4,6 +4,7 @@ import { AuthProvider } from './auth/AuthContext'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { AppLayout } from './layout/AppLayout'
 import { AcceptInvitePage } from './pages/AcceptInvitePage'
+import { FleetPage } from './pages/FleetPage'
 import { LoginPage } from './pages/LoginPage'
 import { MissionDetailPage } from './pages/MissionDetailPage'
 import { MissionPlanPage } from './pages/MissionPlanPage'
@@ -34,6 +35,7 @@ function App() {
             <Route path="/missions/new" element={<NewMissionPage />} />
             <Route path="/missions/:id" element={<MissionDetailPage />} />
             <Route path="/missions/:id/plan" element={<MissionPlanPage />} />
+            <Route path="/fleet" element={<FleetPage />} />
             <Route path="/profile" element={<ProfilePage />} />
             <Route
               path="/api-docs"

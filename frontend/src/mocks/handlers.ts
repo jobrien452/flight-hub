@@ -1,6 +1,7 @@
 import { http, HttpResponse } from 'msw'
 import { API_URL } from '../api/client'
 import type { ApiToken } from '../types/apiToken'
+import type { Drone } from '../types/drone'
 import type { Mission } from '../types/mission'
 import type { MissionReport } from '../types/missionReport'
 import type { User } from '../types/user'
@@ -11,8 +12,22 @@ export const fixtureMission: Mission = {
   status: 'draft',
   owner_id: 'admin-1',
   assigned_pilot_ids: ['pilot-1'],
+  drone_id: null,
   waypoints: [{ lat: 1, lng: 2, alt: 10 }],
   plan_params: null,
+  created_at: '2026-01-01T00:00:00Z',
+  updated_at: '2026-01-01T00:00:00Z',
+}
+
+export const fixtureDrone: Drone = {
+  id: 'drone-1',
+  name: 'Falcon 1',
+  model: 'Matrice 350 RTK',
+  serial: 'SN-001',
+  status: 'available',
+  owner_id: 'admin-1',
+  flight_hours: 12.5,
+  missions_flown: 8,
   created_at: '2026-01-01T00:00:00Z',
   updated_at: '2026-01-01T00:00:00Z',
 }
@@ -76,6 +91,25 @@ export const handlers = [
     const users = role ? fixtureUsers.filter((u) => u.role === role) : fixtureUsers
     return HttpResponse.json(users)
   }),
+
+  http.get(`${API_URL}/drones`, () => HttpResponse.json([fixtureDrone])),
+
+  http.get(`${API_URL}/drones/:id`, ({ params }) => {
+    if (params.id !== fixtureDrone.id) return new HttpResponse(null, { status: 404 })
+    return HttpResponse.json(fixtureDrone)
+  }),
+
+  http.post(`${API_URL}/drones`, async ({ request }) => {
+    const body = (await request.json()) as Partial<Drone>
+    return HttpResponse.json({ ...fixtureDrone, id: 'drone-2', ...body }, { status: 201 })
+  }),
+
+  http.patch(`${API_URL}/drones/:id`, async ({ request }) => {
+    const body = (await request.json()) as Partial<Drone>
+    return HttpResponse.json({ ...fixtureDrone, ...body })
+  }),
+
+  http.delete(`${API_URL}/drones/:id`, () => new HttpResponse(null, { status: 204 })),
 
   http.get(`${API_URL}/missions`, () => HttpResponse.json([fixtureMission])),
 

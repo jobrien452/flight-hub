@@ -42,3 +42,26 @@
 .row-action button:hover {
   border-color: var(--accent);
 }
+
+.plan-aircraft {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.plan-aircraft label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-dim);
+}
+
+.plan-aircraft select {
+  font: inherit;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 4px 8px;
+}

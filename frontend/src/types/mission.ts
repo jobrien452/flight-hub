@@ -36,6 +36,7 @@ export interface Mission {
   status: MissionStatus
   owner_id: string
   assigned_pilot_ids: string[]
+  drone_id: string | null
   waypoints: Waypoint[]
   plan_params: PlanParams | null
   created_at: string
@@ -46,6 +47,7 @@ export interface Mission {
 export interface MissionCreateInput {
   name: string
   assigned_pilot_ids?: string[]
+  drone_id?: string | null
   waypoints?: Waypoint[]
   plan_params?: PlanParams
 }
@@ -53,6 +55,7 @@ export interface MissionCreateInput {
 export interface MissionUpdateInput {
   name?: string
   assigned_pilot_ids?: string[]
+  drone_id?: string | null
   waypoints?: Waypoint[]
   plan_params?: PlanParams
 }

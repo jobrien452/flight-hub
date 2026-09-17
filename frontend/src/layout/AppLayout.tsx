@@ -14,6 +14,9 @@ export function AppLayout() {
           <NavLink to="/missions" className={({ isActive }) => (isActive ? 'active' : '')}>
             Missions
           </NavLink>
+          <NavLink to="/fleet" className={({ isActive }) => (isActive ? 'active' : '')}>
+            Fleet
+          </NavLink>
           {session?.role === 'admin' && (
             <NavLink to="/api-docs" className={({ isActive }) => (isActive ? 'active' : '')}>
               API

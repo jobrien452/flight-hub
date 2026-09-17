@@ -44,6 +44,28 @@ describe('routing', () => {
   })
 })
 
+describe('fleet', () => {
+  it('opens the fleet from the nav', async () => {
+    localStorage.setItem('flyby.session', JSON.stringify(session))
+    renderApp('/missions')
+
+    await userEvent.click(screen.getByRole('link', { name: 'Fleet' }))
+
+    expect(await screen.findByRole('heading', { name: 'Fleet' })).toBeInTheDocument()
+  })
+
+  it('gives a pilot the aircraft they fly without the fleet controls', async () => {
+    localStorage.setItem(
+      'flyby.session',
+      JSON.stringify({ ...session, user_id: 'pilot-1', name: 'Pete Pilot', role: 'pilot' }),
+    )
+    renderApp('/fleet')
+
+    expect(await screen.findByRole('heading', { name: 'Fleet' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /add drone/i })).not.toBeInTheDocument()
+  })
+})
+
 describe('sign out', () => {
   it('clears the session and returns to login', async () => {
     localStorage.setItem('flyby.session', JSON.stringify(session))

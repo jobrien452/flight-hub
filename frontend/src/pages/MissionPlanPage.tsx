@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { assignPilot, getMission, unassignPilot } from '../api/missions'
+import { listDrones } from '../api/drones'
+import { assignPilot, getMission, unassignPilot, updateMission } from '../api/missions'
 import { listUsers } from '../api/users'
 import { useAuth } from '../auth/useAuth'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { MapView } from '../map/MapView'
 import { PlanSummary } from '../missions/PlanSummary'
+import type { Drone } from '../types/drone'
 import type { Mission } from '../types/mission'
 import type { User } from '../types/user'
 import './MissionPlanPage.css'
@@ -22,6 +24,7 @@ export function MissionPlanPage() {
   const { session } = useAuth()
   const [mission, setMission] = useState<Mission | null>(null)
   const [pilots, setPilots] = useState<User[]>([])
+  const [drones, setDrones] = useState<Drone[]>([])
   const [loadError, setLoadError] = useState<string | null>(null)
   const [search, setSearch] = useState('')
   const [pending, setPending] = useState<PendingChange | null>(null)
@@ -34,6 +37,7 @@ export function MissionPlanPage() {
       .then(setMission)
       .catch(() => setLoadError('Could not load mission'))
     listUsers(session.token, 'pilot').then(setPilots).catch(() => setPilots([]))
+    listDrones(session.token).then(setDrones).catch(() => setDrones([]))
   }, [session, id])
 
   const visiblePilots = useMemo(() => {
@@ -44,6 +48,17 @@ export function MissionPlanPage() {
         p.name.toLowerCase().includes(needle) || p.email.toLowerCase().includes(needle),
     )
   }, [pilots, search])
+
+  // an empty pick hands the aircraft back to the pool
+  async function handleDroneChange(droneId: string) {
+    if (!session || !id) return
+    setChangeError(null)
+    try {
+      setMission(await updateMission(id, { drone_id: droneId || null }, session.token))
+    } catch {
+      setChangeError('Could not book that aircraft')
+    }
+  }
 
   async function handleConfirm(message: string | null) {
     if (!session || !id || !pending) return
@@ -76,6 +91,22 @@ export function MissionPlanPage() {
       </div>
 
       <PlanSummary waypoints={mission.waypoints} />
+
+      <div className="plan-aircraft">
+        <label htmlFor="mission-aircraft">Aircraft</label>
+        <select
+          id="mission-aircraft"
+          value={mission.drone_id ?? ''}
+          onChange={(e) => handleDroneChange(e.target.value)}
+        >
+          <option value="">No aircraft booked</option>
+          {drones.map((drone) => (
+            <option key={drone.id} value={drone.id}>
+              {drone.name} ({drone.model})
+            </option>
+          ))}
+        </select>
+      </div>
 
       <div className="plan-map">
         <MapView waypoints={mission.waypoints} onMapClick={() => {}} />
