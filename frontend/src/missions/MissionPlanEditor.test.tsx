@@ -511,30 +511,52 @@ describe('tool buttons', () => {
 
     for (const name of ['Select', 'Waypoint', 'Rectangle Survey', 'Corridor']) {
       const button = screen.getByRole('button', { name })
-      expect(button).toBeInTheDocument()
-      // the label is the accessible name, the visible part is the icon
       expect(button.querySelector('svg')).toBeInTheDocument()
-      expect(button.textContent).not.toBe(name)
+      // the only text on the button is the tooltip, which stays hidden until hover
+      expect(button.querySelector('.tool-help')).toHaveTextContent(name)
     }
   })
 
-  it('explains what each tool does in a tooltip', () => {
+  it('names the tool in its tooltip', () => {
     renderEditor()
 
     expect(screen.getByRole('button', { name: 'Rectangle Survey' })).toHaveTextContent(
-      /four clicks/i,
+      'Rectangle Survey',
     )
-    expect(screen.getByRole('button', { name: 'Corridor' })).toHaveTextContent(/trace a line/i)
-    expect(screen.getByRole('button', { name: 'Waypoint' })).toHaveTextContent(/one at a time/i)
-    expect(screen.getByRole('button', { name: 'Select' })).toHaveTextContent(/move/i)
+    expect(screen.getByRole('button', { name: 'Corridor' })).toHaveTextContent('Corridor')
   })
 
-  it('points the tooltip at the button for a screen reader too', () => {
+  it('explains the tool you are on down in the panel', async () => {
     renderEditor()
-    const button = screen.getByRole('button', { name: 'Corridor' })
 
-    const describedBy = button.getAttribute('aria-describedby')
+    expect(screen.getByText(/click a waypoint to edit or drag it/i)).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Corridor' }))
+
+    expect(screen.getByText(/trace a line/i)).toBeInTheDocument()
+    expect(screen.queryByText(/click a waypoint to edit or drag it/i)).not.toBeInTheDocument()
+  })
+
+  it('explains the survey tool the same way', async () => {
+    renderEditor()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Rectangle Survey' }))
+
+    expect(screen.getByText(/four clicks to box an area/i)).toBeInTheDocument()
+  })
+
+  it('ties the explanation to the active tool for a screen reader', async () => {
+    renderEditor()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Waypoint' }))
+    const active = screen.getByRole('button', { name: 'Waypoint' })
+
+    const describedBy = active.getAttribute('aria-describedby')
     expect(describedBy).toBeTruthy()
-    expect(document.getElementById(describedBy as string)).toHaveTextContent(/trace a line/i)
+    expect(document.getElementById(describedBy as string)).toHaveTextContent(/drop a waypoint/i)
+    // only the tool in use points at it, the others describe nothing
+    expect(screen.getByRole('button', { name: 'Corridor' })).not.toHaveAttribute(
+      'aria-describedby',
+    )
   })
 })

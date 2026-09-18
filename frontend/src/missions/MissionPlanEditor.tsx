@@ -20,12 +20,12 @@ type ToolId = 'waypoint' | 'rectangle_survey' | 'corridor' | 'select'
 // toolbar order, select first since it is what the editor opens on
 const TOOL_ORDER: ToolId[] = ['select', 'waypoint', 'rectangle_survey', 'corridor']
 
-// the glyph says which tool, this says what it actually does
+// the tooltip names the tool, this says what it does once you are on it
 const TOOL_HELP: Record<ToolId, string> = {
-  select: 'Pick a waypoint to move, edit or delete',
-  waypoint: 'Drop waypoints one at a time',
-  rectangle_survey: 'Four clicks to box an area, then generate the sweep',
-  corridor: 'Trace a line, then generate passes either side of it',
+  select: 'click a waypoint to edit or drag it',
+  waypoint: 'click to drop a waypoint, one per click',
+  rectangle_survey: 'four clicks to box an area, then generate the sweep',
+  corridor: 'trace a line, then generate passes either side of it',
 }
 
 export interface MissionPlanEditorValue {
@@ -218,16 +218,20 @@ export function MissionPlanEditor({
                 type="button"
                 className={activeToolId === id ? 'active' : ''}
                 aria-label={tools[id].label}
-                aria-describedby={`tool-help-${id}`}
+                aria-describedby={activeToolId === id ? 'tool-hint' : undefined}
                 onClick={() => handleToolSelect(id)}
               >
                 <ToolIcon name={tools[id].icon} />
-                <span className="tool-help" id={`tool-help-${id}`} role="tooltip">
-                  {TOOL_HELP[id]}
+                {/* duplicates the aria-label, so it is decoration for the eye only */}
+                <span className="tool-help" aria-hidden="true">
+                  {tools[id].label}
                 </span>
               </button>
             ))}
           </div>
+          <p className="text-dim mono tool-hint" id="tool-hint">
+            {TOOL_HELP[activeToolId]}
+          </p>
           {activeToolId !== 'select' && (
             <label>
               Altitude (m)
@@ -257,9 +261,6 @@ export function MissionPlanEditor({
                 onChange={(e) => setCorridorWidth(Number(e.target.value))}
               />
             </label>
-          )}
-          {activeToolId === 'select' && (
-            <p className="text-dim mono">click a waypoint to edit or drag it</p>
           )}
           {planParams?.type === 'survey' && (
             <button type="button" onClick={handleGenerateSurvey}>
