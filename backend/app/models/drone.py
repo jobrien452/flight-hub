@@ -20,9 +20,9 @@ class Drone(Document):
     serial: str = ""
     # where the aircraft puts its video, the jetson serves rtsp on the airframe
     stream_url: str = ""
+    # retired is how an aircraft leaves the fleet, the record stays so the
+    # missions it flew can still say what flew them
     status: DroneStatus = DroneStatus.AVAILABLE
-    # deleted, but kept because missions it flew still read their aircraft off it
-    hidden: bool = False
     owner_id: str  # the admin whose fleet this belongs to
     # the digital twin's running totals, both fed by submitted pilot reports
     flight_hours: float = 0

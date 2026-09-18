@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { MemoryRouter } from 'react-router-dom'
@@ -135,16 +135,17 @@ describe('FleetPage', () => {
     expect(screen.getByRole('dialog')).toHaveTextContent(/8 missions/i)
   })
 
-  it('says plainly that removal cannot be undone', async () => {
+  it('says an aircraft with history is retired and can come back', async () => {
     renderPage()
     await screen.findByText(fixtureDrone.name)
 
     await userEvent.click(screen.getByRole('button', { name: /remove falcon 1/i }))
 
-    expect(screen.getByRole('dialog')).toHaveTextContent(/cannot be undone/i)
+    expect(screen.getByRole('dialog')).toHaveTextContent(/retired/i)
+    expect(screen.getByRole('dialog')).toHaveTextContent(/bring it back/i)
   })
 
-  it('says a drone with no history is gone for good', async () => {
+  it('warns that a drone with no history goes for good', async () => {
     server.use(
       http.get(`${API_URL}/drones`, () =>
         HttpResponse.json([{ ...fixtureDrone, missions_flown: 0, flight_hours: 0 }]),
@@ -155,7 +156,23 @@ describe('FleetPage', () => {
 
     await userEvent.click(screen.getByRole('button', { name: /remove falcon 1/i }))
 
-    expect(screen.getByRole('dialog')).toHaveTextContent(/permanently/i)
+    expect(screen.getByRole('dialog')).toHaveTextContent(/cannot be undone/i)
+  })
+
+  it('asks the server for the retired ones when they are wanted', async () => {
+    const asked: string[] = []
+    server.use(
+      http.get(`${API_URL}/drones`, ({ request }) => {
+        asked.push(new URL(request.url).search)
+        return HttpResponse.json([fixtureDrone])
+      }),
+    )
+    renderPage()
+    await screen.findByText(fixtureDrone.name)
+
+    await userEvent.click(screen.getByLabelText(/show retired/i))
+
+    await waitFor(() => expect(asked.at(-1)).toContain('include_retired=true'))
   })
 
   it('warns that a booked mission goes back to draft', async () => {

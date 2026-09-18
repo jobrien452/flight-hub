@@ -35,7 +35,5 @@ class DroneOut(BaseModel):
     missions_flown: int
     # the mission holding this aircraft, so the ui can keep it out of other plans
     booked_on: str | None = None
-    # deleted and out of the fleet, still readable for the missions it flew
-    hidden: bool = False
     created_at: datetime
     updated_at: datetime

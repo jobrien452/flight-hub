@@ -22,11 +22,14 @@ def _out(drone: Drone, booked_on: str | None = None) -> DroneOut:
 
 
 @router.get("", response_model=list[DroneOut])
-async def list_drones(current_user: CurrentUser = Depends(get_current_user)) -> list[DroneOut]:
+async def list_drones(
+    include_retired: bool = False, current_user: CurrentUser = Depends(get_current_user)
+) -> list[DroneOut]:
     if current_user.role == Role.ADMIN:
-        drones = await Drone.find(
-            Drone.owner_id == current_user.user_id, Drone.hidden == False  # noqa: E712
-        ).to_list()
+        drones = await Drone.find(Drone.owner_id == current_user.user_id).to_list()
+        # a retired aircraft is out of the working fleet, it is still there to ask for
+        if not include_retired:
+            drones = [d for d in drones if d.status != DroneStatus.RETIRED]
         booked = await bookings_by_drone(current_user.user_id)
         return [_out(d, booked.get(str(d.id))) for d in drones]
 
@@ -115,9 +118,9 @@ async def delete_drone(
             await _tell_pilots(mission)
 
     if flown or drone.missions_flown or drone.flight_hours:
-        # kept out of sight so its hours and the missions it flew still add up
+        # it has a history, so it is decommissioned rather than erased. that keeps
+        # the missions it flew able to name it, and it can be brought back
         drone.status = DroneStatus.RETIRED
-        drone.hidden = True
         drone.updated_at = datetime.now(timezone.utc)
         await drone.save()
         return

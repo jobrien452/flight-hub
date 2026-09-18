@@ -1,9 +1,10 @@
 import { apiFetch } from './client'
 import type { Drone, DroneCreateInput, DroneUpdateInput } from '../types/drone'
 
-// admins get their own fleet back, pilots get whatever they are booked to fly
-export async function listDrones(token: string): Promise<Drone[]> {
-  return apiFetch<Drone[]>('/drones', token)
+// admins get their own fleet back, pilots get whatever they are booked to fly.
+// retired aircraft are out of the working fleet, ask for them when they are wanted
+export async function listDrones(token: string, includeRetired = false): Promise<Drone[]> {
+  return apiFetch<Drone[]>(`/drones${includeRetired ? '?include_retired=true' : ''}`, token)
 }
 
 export async function getDrone(id: string, token: string): Promise<Drone> {

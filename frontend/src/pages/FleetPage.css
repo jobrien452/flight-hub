@@ -64,3 +64,16 @@
   text-transform: none;
   letter-spacing: 0;
 }
+
+.fleet-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-dim);
+  cursor: pointer;
+}
+
+.fleet-toggle input {
+  accent-color: var(--accent);
+}

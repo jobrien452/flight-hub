@@ -13,13 +13,12 @@ const STATUSES: DroneStatus[] = ['available', 'in_flight', 'maintenance', 'retir
 function removalWarning(drone: Drone): string {
   const flown = drone.missions_flown > 0 || drone.flight_hours > 0
   const history = flown
-    ? `${drone.name} has ${drone.missions_flown} missions and ${drone.flight_hours} hours on it, so it is marked retired and hidden rather than deleted. The missions it flew keep their aircraft.`
-    : `${drone.name} has never flown, so it is removed permanently.`
+    ? `${drone.name} has ${drone.missions_flown} missions and ${drone.flight_hours} hours on it, so it is retired rather than deleted. It leaves the fleet and the aircraft pickers, the missions it flew keep it, and you can bring it back by setting a status on it again.`
+    : `${drone.name} has never flown, so there is nothing to keep and it goes for good. This cannot be undone.`
   const booking = drone.booked_on
     ? ' The mission holding it loses its aircraft and goes back to draft, and its pilots are told.'
     : ''
-  // there is no restoring one from the fleet page, so say so before they click
-  return `${history}${booking} This cannot be undone.`
+  return history + booking
 }
 
 export function FleetPage() {
@@ -35,6 +34,7 @@ export function FleetPage() {
   const [editName, setEditName] = useState('')
   const [editStatus, setEditStatus] = useState<DroneStatus>('available')
   const [removing, setRemoving] = useState<Drone | null>(null)
+  const [showRetired, setShowRetired] = useState(false)
   const [working, setWorking] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
 
@@ -42,10 +42,10 @@ export function FleetPage() {
 
   useEffect(() => {
     if (!session) return
-    listDrones(session.token)
+    listDrones(session.token, showRetired)
       .then(setDrones)
       .catch(() => setLoadError('Could not load the fleet'))
-  }, [session])
+  }, [session, showRetired])
 
   function closeAdd() {
     setAdding(false)
@@ -122,9 +122,19 @@ export function FleetPage() {
       <div className="page-header">
         <h1>Fleet</h1>
         {isAdmin && (
-          <button type="button" className="button" onClick={() => setAdding(true)}>
-            Add drone
-          </button>
+          <div className="header-actions">
+            <label className="fleet-toggle">
+              <input
+                type="checkbox"
+                checked={showRetired}
+                onChange={(e) => setShowRetired(e.target.checked)}
+              />
+              Show retired
+            </label>
+            <button type="button" className="button" onClick={() => setAdding(true)}>
+              Add drone
+            </button>
+          </div>
         )}
       </div>
 

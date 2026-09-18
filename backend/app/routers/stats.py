@@ -31,11 +31,8 @@ async def dashboard(current_user: CurrentUser = Depends(require_admin)) -> Dashb
     for mission in missions:
         by_status[mission.status.value] += 1
 
-    # a deleted aircraft is out of the fleet, but what it flew is still this
-    # operation's history, so it counts towards the hours and not the headcount
-    in_fleet = [d for d in drones if not d.hidden]
     drones_by_status = {status.value: 0 for status in DroneStatus}
-    for drone in in_fleet:
+    for drone in drones:
         drones_by_status[drone.status.value] += 1
 
     pilot_rows = []
@@ -60,7 +57,7 @@ async def dashboard(current_user: CurrentUser = Depends(require_admin)) -> Dashb
     return DashboardStats(
         missions_total=len(missions),
         missions_by_status=by_status,
-        drones_total=len(in_fleet),
+        drones_total=len(drones),
         drones_by_status=drones_by_status,
         fleet_flight_hours=round(sum(d.flight_hours for d in drones), 2),
         fleet_missions_flown=sum(d.missions_flown for d in drones),

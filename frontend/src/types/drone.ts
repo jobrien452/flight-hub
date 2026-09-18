@@ -15,8 +15,6 @@ export interface Drone {
   missions_flown: number
   // the mission holding this aircraft, a booking is exclusive until it is flown
   booked_on: string | null
-  // removed from the fleet but kept, the missions it flew still read from it
-  hidden: boolean
   created_at: string
   updated_at: string
 }

@@ -42,8 +42,8 @@ async def test_a_drone_with_hours_on_it_is_kept_and_hidden(
     assert resp.status_code == 204
     kept = await Drone.get(drone.id)
     assert kept is not None
+    # retired is the whole of it, there is no second flag saying the same thing
     assert kept.status == DroneStatus.RETIRED
-    assert kept.hidden is True
     # the record a mission's stats lean on is untouched
     assert kept.flight_hours == 12.5
     assert kept.missions_flown == 3
@@ -98,7 +98,7 @@ async def test_a_planned_mission_goes_back_to_draft(client, admin_headers, admin
     assert pulled.status == MissionStatus.DRAFT
 
 
-async def test_the_fleet_list_leaves_a_deleted_drone_out(
+async def test_the_fleet_list_leaves_a_retired_drone_out(
     client, admin_headers, admin_user: User
 ):
     kept = await a_drone(admin_user)
@@ -110,6 +110,42 @@ async def test_the_fleet_list_leaves_a_deleted_drone_out(
     assert [d["id"] for d in resp.json()] == [str(kept.id)]
 
 
+async def test_the_retired_ones_can_be_asked_for(client, admin_headers, admin_user: User):
+    kept = await a_drone(admin_user)
+    gone = await a_drone(admin_user, missions_flown=2)
+    await client.delete(f"/drones/{gone.id}", headers=admin_headers)
+
+    resp = await client.get("/drones?include_retired=true", headers=admin_headers)
+
+    assert {d["id"] for d in resp.json()} == {str(kept.id), str(gone.id)}
+
+
+async def test_an_aircraft_retired_by_hand_leaves_the_list_the_same_way(
+    client, admin_headers, admin_user: User
+):
+    drone = await a_drone(admin_user)
+
+    await client.patch(
+        f"/drones/{drone.id}", json={"status": "retired"}, headers=admin_headers
+    )
+
+    assert (await client.get("/drones", headers=admin_headers)).json() == []
+
+
+async def test_a_retired_aircraft_can_be_brought_back(client, admin_headers, admin_user: User):
+    drone = await a_drone(admin_user, missions_flown=2)
+    await client.delete(f"/drones/{drone.id}", headers=admin_headers)
+
+    resp = await client.patch(
+        f"/drones/{drone.id}", json={"status": "maintenance"}, headers=admin_headers
+    )
+
+    assert resp.status_code == 200
+    assert [d["id"] for d in (await client.get("/drones", headers=admin_headers)).json()] == [
+        str(drone.id)
+    ]
+
+
 async def test_a_deleted_drone_can_still_be_read_by_id(client, admin_headers, admin_user: User):
     drone = await a_drone(admin_user, missions_flown=2)
     await client.delete(f"/drones/{drone.id}", headers=admin_headers)
@@ -118,7 +154,7 @@ async def test_a_deleted_drone_can_still_be_read_by_id(client, admin_headers, ad
     resp = await client.get(f"/drones/{drone.id}", headers=admin_headers)
 
     assert resp.status_code == 200
-    assert resp.json()["hidden"] is True
+    assert resp.json()["status"] == "retired"
 
 
 async def test_an_aircraft_can_be_removed_while_it_is_out_flying(
@@ -135,7 +171,6 @@ async def test_an_aircraft_can_be_removed_while_it_is_out_flying(
     assert flying.status == MissionStatus.IN_FLIGHT
     assert flying.drone_id == str(drone.id)
     kept = await Drone.get(drone.id)
-    assert kept.hidden is True
     assert kept.status == DroneStatus.RETIRED
 
 
