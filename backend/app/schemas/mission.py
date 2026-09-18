@@ -2,7 +2,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field
 
-from app.models.mission import Mission, MissionStatus, PlanParams, Waypoint
+from app.models.mission import Mission, MissionStatus, Payload, PlanParams, Waypoint
 
 
 class MissionCreate(BaseModel):
@@ -11,6 +11,7 @@ class MissionCreate(BaseModel):
     name: str
     assigned_pilot_ids: list[str] = Field(default_factory=list)
     drone_id: str | None = None
+    payload: Payload | None = None
     waypoints: list[Waypoint] = Field(default_factory=list)
     plan_params: PlanParams | None = Field(default=None, discriminator="type")
 
@@ -20,6 +21,7 @@ class MissionUpdate(BaseModel):
     name: str | None = None
     assigned_pilot_ids: list[str] | None = None
     drone_id: str | None = None
+    payload: Payload | None = None
     waypoints: list[Waypoint] | None = None
     plan_params: PlanParams | None = Field(default=None, discriminator="type")
 
@@ -49,13 +51,14 @@ class MissionSummaryOut(BaseModel):
 
 
 class MissionOut(MissionSummaryOut):
+    payload: Payload | None = None
     waypoints: list[Waypoint]
     plan_params: PlanParams | None = Field(default=None, discriminator="type")
 
 
 def mission_summary(mission: Mission) -> MissionSummaryOut:
     return MissionSummaryOut(
-        **mission.model_dump(exclude={"id", "waypoints", "plan_params"}),
+        **mission.model_dump(exclude={"id", "waypoints", "plan_params", "payload"}),
         id=str(mission.id),
         waypoint_count=len(mission.waypoints),
     )

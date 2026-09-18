@@ -108,9 +108,16 @@ async def update_mission(
 ) -> MissionOut:
     mission = await get_owned_mission(mission_id, current_user)
     updates = payload.model_dump(exclude_unset=True)
-    # booking an aircraft only works out of your own fleet
-    if updates.get("drone_id"):
-        await get_owned_drone(updates["drone_id"], current_user)
+    # booking an aircraft only works out of your own fleet, and only one that is
+    # free. re-checked only when the booking changes, so saving a mission whose
+    # drone has since taken off still works
+    if updates.get("drone_id") and updates["drone_id"] != mission.drone_id:
+        drone = await get_owned_drone(updates["drone_id"], current_user)
+        if drone.status != DroneStatus.AVAILABLE:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"{drone.name} is {drone.status.value}, only an available drone can be booked",
+            )
     for field, value in updates.items():
         setattr(mission, field, value)
     mission.updated_at = datetime.now(timezone.utc)
@@ -130,6 +137,13 @@ async def publish_mission(
     if not mission.waypoints:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail="a mission needs waypoints to publish"
+        )
+    # a pilot cannot fly a plan that names no aircraft, so this is the gate.
+    # saving is deliberately not gated, a draft may sit half finished as long as it likes
+    if not mission.drone_id:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="book an aircraft before publishing this mission",
         )
     mission.status = MissionStatus.PUBLISHED
     mission.updated_at = datetime.now(timezone.utc)

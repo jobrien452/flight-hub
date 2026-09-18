@@ -34,6 +34,20 @@ class Waypoint(BaseModel):
     speed: float | None = None
 
 
+class Payload(BaseModel):
+    # what is bolted to the aircraft. the sensor numbers are carried rather than
+    # looked up so an old mission still reads correctly if the catalogue changes
+    name: str
+    camera: str = ""
+    lens: str = ""
+    gimbal: str = ""
+    sensor_width_mm: float = 0
+    sensor_height_mm: float = 0
+    image_width_px: int = 0
+    image_height_px: int = 0
+    focal_length_mm: float = 0
+
+
 class WaypointPlanParams(BaseModel):
     # manual point placement, waypoints here are a pass-through to Mission.waypoints
     type: Literal["waypoint"] = "waypoint"
@@ -67,6 +81,7 @@ class Mission(Document):
     owner_id: str  # id of the admin who created it
     assigned_pilot_ids: list[str] = Field(default_factory=list)
     drone_id: str | None = None  # the aircraft booked for this flight
+    payload: Payload | None = None  # camera, lens and gimbal it is carrying
     # the actual flight path, manually placed or generated, always concrete points
     waypoints: list[Waypoint] = Field(default_factory=list)
     # how the waypoints above were produced, kept so settings stay editable

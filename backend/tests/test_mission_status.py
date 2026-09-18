@@ -1,3 +1,4 @@
+from app.models.drone import Drone
 from app.models.mission import Mission, MissionStatus
 from app.models.user import User
 
@@ -26,8 +27,14 @@ async def test_status_cannot_be_set_through_a_plain_update(
 
 
 async def test_publish_moves_a_draft_to_published(client, admin_headers, admin_user: User):
+    # publishing needs an aircraft booked, see test_mission_payload.py
+    drone = Drone(name="Falcon 1", owner_id=str(admin_user.id))
+    await drone.insert()
     mission = Mission(
-        name="Ready", owner_id=str(admin_user.id), waypoints=[{"lat": 1.0, "lng": 2.0}]
+        name="Ready",
+        owner_id=str(admin_user.id),
+        waypoints=[{"lat": 1.0, "lng": 2.0}],
+        drone_id=str(drone.id),
     )
     await mission.insert()
 
