@@ -1,7 +1,8 @@
 .map-style-control {
   position: absolute;
   right: 10px;
-  bottom: 25px;
+  /* clears the stats bar along the bottom */
+  bottom: 56px;
   z-index: 1;
   display: flex;
   gap: 1px;

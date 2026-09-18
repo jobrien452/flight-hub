@@ -465,6 +465,15 @@ export function MissionPlanEditor({
       <div className="plan-editor-map">
         <MapView
           waypoints={waypoints}
+          extraStats={
+            payload
+              ? [
+                  { label: 'Ortho GSD', value: `${gsdCmPerPixel(payload, altitude).toFixed(2)} cm/px` },
+                  { label: 'Frame width', value: `${footprintWidthM(payload, altitude).toFixed(0)} m` },
+                  { label: 'Payload', value: payload.name },
+                ]
+              : undefined
+          }
           onMapClick={handleMapClick}
           overlay={liveOverlay}
           onHandleDragStart={handleCornerGrab}

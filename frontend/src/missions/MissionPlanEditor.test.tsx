@@ -21,6 +21,7 @@ vi.mock('../map/MapView', () => ({
     onHandleDragEnd,
     infoboxAt,
     infobox,
+    extraStats,
   }: {
     onMapClick: (p: { lng: number; lat: number }) => void
     overlay?: { markers: unknown[]; ghost?: unknown[] }
@@ -29,6 +30,7 @@ vi.mock('../map/MapView', () => ({
     onHandleDragEnd: () => void
     infoboxAt?: unknown
     infobox?: React.ReactNode
+    extraStats?: { label: string; value: string }[]
   }) => (
     <div>
       <button onClick={() => onMapClick({ lng: 10, lat: 20 })}>click A</button>
@@ -58,6 +60,9 @@ vi.mock('../map/MapView', () => ({
         {overlay?.markers.length ?? 0} markers{overlay?.ghost ? ' and a ghost' : ''}
       </span>
       <div data-testid="infobox">{infoboxAt ? infobox : null}</div>
+      <span data-testid="map-stats">
+        {(extraStats ?? []).map((s) => `${s.label}=${s.value}`).join(' ')}
+      </span>
     </div>
   ),
 }))
@@ -862,8 +867,10 @@ describe('aircraft and payload', () => {
 
     await userEvent.selectOptions(await screen.findByLabelText(/payload/i), 'sony-ilx-lr1-24')
 
-    // 50m default altitude on the 24mm gives just under a centimetre per pixel
-    expect(await screen.findByText(/0\.79 cm\/px/i)).toBeInTheDocument()
+    // 50m default altitude on the 24mm gives just under a centimetre per pixel.
+    // it shows in the panel and again on the map bar, so this pins the panel's
+    const specs = screen.getByText('Ortho GSD').closest('dl')!
+    expect(within(specs).getByText(/0\.79 cm\/px/i)).toBeInTheDocument()
     expect(screen.getByText(/Gremsy Pixy/)).toBeInTheDocument()
   })
 
@@ -1099,5 +1106,25 @@ describe('MissionPlanEditor naming', () => {
     renderEditor()
 
     expect(screen.getByText(/needs a name/i)).toBeInTheDocument()
+  })
+})
+
+describe('MissionPlanEditor map readout', () => {
+  it('puts the optics on the map once a payload is picked', async () => {
+    renderEditor()
+    await screen.findByLabelText(/payload/i)
+
+    await userEvent.selectOptions(screen.getByLabelText(/payload/i), 'sony-ilx-lr1-24')
+
+    // 50m default altitude on the 24mm, the same sums the panel shows
+    expect(screen.getByTestId('map-stats')).toHaveTextContent('Ortho GSD=0.79 cm/px')
+    expect(screen.getByTestId('map-stats')).toHaveTextContent('Frame width=75 m')
+  })
+
+  it('leaves the map readout alone with no payload', async () => {
+    renderEditor()
+    await screen.findByLabelText(/payload/i)
+
+    expect(screen.getByTestId('map-stats')).toHaveTextContent('')
   })
 })

@@ -31,3 +31,8 @@
   font-family: var(--mono);
   font-size: 12px;
 }
+
+/* the scale bar is mapbox's own control, lift it clear of the stats bar */
+.map-container .mapboxgl-ctrl-bottom-left {
+  bottom: 32px;
+}

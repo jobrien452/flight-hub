@@ -21,6 +21,7 @@ interface MockMapProps {
   onMouseUp: () => void
   onMouseEnter: () => void
   onMouseLeave: () => void
+  onMove: (e: { viewState: { bearing: number } }) => void
   interactiveLayerIds?: string[]
   mapStyle: string
   cursor?: string
@@ -64,6 +65,7 @@ vi.mock('react-map-gl/mapbox', () => ({
     onMouseUp,
     onMouseEnter,
     onMouseLeave,
+    onMove,
     interactiveLayerIds,
     mapStyle,
     cursor,
@@ -112,6 +114,7 @@ vi.mock('react-map-gl/mapbox', () => ({
         onClick={() => onMouseMove({ lngLat: { lng: 10.001, lat: 20.001 }, point: { x: 52, y: 61 } })}
       />
       <button data-testid="release" onClick={() => onMouseUp()} />
+      <button data-testid="turn-map" onClick={() => onMove({ viewState: { bearing: 45 } })} />
       <button data-testid="enter-layer" onClick={() => onMouseEnter()} />
       <button data-testid="leave-layer" onClick={() => onMouseLeave()} />
     </div>
@@ -693,5 +696,57 @@ describe('ghost shapes', () => {
     const geometries = screen.getByTestId('mock-source-tool-overlay').getAttribute('data-geometries')
     expect(geometries).toContain('LineString')
     expect(geometries).not.toContain('Polygon')
+  })
+})
+
+describe('the heads up layer', () => {
+  it('lays the plan figures along the bottom of the map', async () => {
+    await renderMap(
+      <MapView
+        waypoints={[
+          { lat: 1, lng: 2, alt: 50 },
+          { lat: 1.01, lng: 2, alt: 50 },
+        ]}
+        onMapClick={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByText('Waypoints')).toBeInTheDocument()
+    expect(screen.getByText('2')).toBeInTheDocument()
+    expect(screen.getByText('Flight time')).toBeInTheDocument()
+    expect(screen.getByText('50 m')).toBeInTheDocument()
+  })
+
+  it('takes figures the page knows and the map does not', async () => {
+    await renderMap(
+      <MapView
+        waypoints={[{ lat: 1, lng: 2, alt: 50 }]}
+        onMapClick={vi.fn()}
+        extraStats={[{ label: 'Ortho GSD', value: '0.79 cm/px' }]}
+      />,
+    )
+
+    expect(screen.getByText('Ortho GSD')).toBeInTheDocument()
+    expect(screen.getByText('0.79 cm/px')).toBeInTheDocument()
+  })
+
+  it('keeps the bar off an empty map', async () => {
+    await renderMap(<MapView waypoints={[]} onMapClick={vi.fn()} />)
+
+    expect(screen.queryByText('Waypoints')).not.toBeInTheDocument()
+  })
+
+  it('starts facing north', async () => {
+    await renderMap(<MapView waypoints={[]} onMapClick={vi.fn()} />)
+
+    expect(screen.getByText('0°')).toBeInTheDocument()
+  })
+
+  it('follows the map round as it is turned', async () => {
+    await renderMap(<MapView waypoints={[]} onMapClick={vi.fn()} />)
+
+    await userEvent.click(screen.getByTestId('turn-map'))
+
+    expect(screen.getByText('45°')).toBeInTheDocument()
   })
 })

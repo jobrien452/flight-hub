@@ -5,7 +5,10 @@ import type { Map as MapboxMap } from 'mapbox-gl'
 import { AddressSearch } from './AddressSearch'
 import { FlightOverlay, type WaypointPicker } from './FlightOverlay'
 import { middleWaypoint } from './flightGeometry'
+import { MapCompass } from './MapCompass'
+import { MapStatsBar, type MapStat } from './MapStatsBar'
 import { MapStyleControl } from './MapStyleControl'
+import { formatDistance, formatDuration, summarisePlan } from '../planning/missionStats'
 import { MAP_STYLES, useMapStyle } from './mapStyles'
 import { projectPosition, type ScreenPoint } from './projectAltitude'
 import { applyTerrain } from './terrain'
@@ -71,6 +74,8 @@ interface MapViewProps {
   // popup pinned to a waypoint, the caller owns whatever goes inside it
   infoboxAt?: Waypoint
   infobox?: ReactNode
+  // anything the page knows that the map does not, the payload figures say
+  extraStats?: MapStat[]
 }
 
 export function MapView({
@@ -82,6 +87,7 @@ export function MapView({
   onHandleDragEnd,
   infoboxAt,
   infobox,
+  extraStats,
 }: MapViewProps) {
   const mapRef = useRef<MapRef>(null)
   const draggingRef = useRef(false)
@@ -95,6 +101,7 @@ export function MapView({
   const [dragging, setDragging] = useState(false)
   const [styleId, setStyleId] = useMapStyle()
   const [infoboxPoint, setInfoboxPoint] = useState<ScreenPoint | null>(null)
+  const [bearing, setBearing] = useState(0)
   const pickWaypoint = useRef<WaypointPicker | null>(null)
   const handlePickerReady = useCallback((pick: WaypointPicker | null) => {
     pickWaypoint.current = pick
@@ -220,6 +227,24 @@ export function MapView({
     mapRef.current?.flyTo({ center: [lng, lat], zoom: 15 })
   }
 
+  const plan = summarisePlan(waypoints)
+  const stats: MapStat[] =
+    waypoints.length === 0
+      ? (extraStats ?? [])
+      : [
+          { label: 'Waypoints', value: String(plan.waypointCount) },
+          { label: 'Distance', value: formatDistance(plan.distanceMeters) },
+          { label: 'Flight time', value: formatDuration(plan.durationSeconds) },
+          {
+            label: 'Altitude',
+            value:
+              plan.minAltitude === plan.maxAltitude
+                ? `${plan.maxAltitude} m`
+                : `${plan.minAltitude}-${plan.maxAltitude} m`,
+          },
+          ...(extraStats ?? []),
+        ]
+
   return (
     <div className="map-container">
       <AddressSearch mapboxToken={mapboxToken} onSelect={handleAddressSelect} />
@@ -256,7 +281,10 @@ export function MapView({
         onMouseUp={handleMouseUp}
         onMouseEnter={() => setHoveringHandle(true)}
         onMouseLeave={() => setHoveringHandle(false)}
-        onMove={positionInfobox}
+        onMove={(evt) => {
+          setBearing(evt.viewState.bearing)
+          positionInfobox()
+        }}
         onIdle={positionInfobox}
       >
         {overlay && (overlay.markers.length > 0 || overlay.ghost) && (
@@ -309,7 +337,12 @@ export function MapView({
           {infobox}
         </div>
       )}
+      <MapCompass
+        bearing={bearing}
+        onReset={() => mapRef.current?.easeTo({ bearing: 0, pitch: 0, duration: 400 })}
+      />
       <MapStyleControl value={styleId} onChange={setStyleId} />
+      <MapStatsBar stats={stats} />
     </div>
   )
 }

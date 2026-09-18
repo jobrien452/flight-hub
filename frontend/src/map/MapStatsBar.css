@@ -1,0 +1,34 @@
+.map-stats-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 2;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  padding: 7px 14px;
+  background: rgba(20, 23, 28, 0.72);
+  backdrop-filter: blur(8px);
+  border-top: 1px solid var(--border);
+  pointer-events: none;
+}
+
+.map-stat {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+}
+
+.map-stat-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-dim);
+}
+
+.map-stat strong {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
