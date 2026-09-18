@@ -79,3 +79,42 @@ Two users types - Types is roles/enums
 
 Android apps contacting our service login/token
 Permanent state updates in database (worded interestingly may need to consider SQL over NOSQL)
+
+Running Tests
+
+Both suites run outside docker, nothing needs to be up first. No mongo, no
+containers, no mapbox token
+
+Extra tech the docker path does not ask for:
+
+- Python 3.12 or newer for the backend suite
+
+- Node 22.22 or newer for the frontend suite, CI runs 24
+
+Backend, from backend/
+
+```python -m venv .venv```
+
+```.venv\Scripts\activate``` on windows, ```source .venv/bin/activate``` anywhere else
+
+```pip install -r requirements-dev.txt```
+
+```pytest -q```
+
+Frontend, from frontend/
+
+```npm ci```
+
+```npm run test```
+
+```npm run test:watch``` to leave it running while working
+
+```npm run lint``` and ```npm run build``` are the other two gates CI checks, build
+runs tsc -b first so it typechecks at the same time
+
+Why neither suite needs a database:
+
+- backend swaps in mongomock per test, every test gets a fresh in memory db
+
+- frontend runs in jsdom with msw standing in for the api, an unhandled request
+  fails the test instead of quietly passing
