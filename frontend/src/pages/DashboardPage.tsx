@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { getStats } from '../api/stats'
 import { useAuth } from '../auth/useAuth'
+import { statusLabel } from '../format/status'
 import type { DashboardStats } from '../types/stats'
 import './DashboardPage.css'
 import './MissionsPage.css'
@@ -23,7 +24,7 @@ function Breakdown({ title, counts }: BreakdownProps) {
         <tbody>
           {rows.map(([label, count]) => (
             <tr key={label}>
-              <th scope="row">{label.replace('_', ' ')}</th>
+              <th scope="row">{statusLabel(label)}</th>
               <td className="breakdown-track">
                 <span
                   role="presentation"

@@ -135,7 +135,7 @@ describe('MissionsPage row menu', () => {
     await userEvent.click(within(screen.getByRole('menu')).getByRole('menuitem', { name: 'Publish' }))
 
     expect(await screen.findByRole('dialog')).toHaveTextContent('assign pilots')
-    expect(screen.getByText('published')).toBeInTheDocument()
+    expect(screen.getByText('Published')).toBeInTheDocument()
   })
 
   it('closes on escape', async () => {

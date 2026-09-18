@@ -73,7 +73,7 @@ describe('MissionDetailPage', () => {
   it('shows the mission name and status once loaded', async () => {
     renderPage(adminSession)
     expect(await screen.findByRole('heading', { name: fixtureMission.name })).toBeInTheDocument()
-    expect(screen.getByText(new RegExp(fixtureMission.status))).toBeInTheDocument()
+    expect(screen.getByText('Draft')).toBeInTheDocument()
   })
 
   it('shows an Edit action for admins', async () => {
@@ -303,7 +303,7 @@ describe('MissionDetailPage publishing', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Cancel' }))
 
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
-    expect(await screen.findByText(/published/)).toBeInTheDocument()
+    expect(await screen.findByText('Published')).toBeInTheDocument()
   })
 
   it('reports a publish that fails', async () => {

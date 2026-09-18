@@ -3,6 +3,7 @@ import { createDrone, deleteDrone, listDrones, updateDrone } from '../api/drones
 import { useAuth } from '../auth/useAuth'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { AIRCRAFT } from '../fleet/aircraft'
+import { statusLabel } from '../format/status'
 import type { Drone, DroneStatus } from '../types/drone'
 import './FleetPage.css'
 import './MissionsPage.css'
@@ -174,7 +175,7 @@ export function FleetPage() {
                 <td>{drone.name}</td>
                 <td>{drone.model}</td>
                 <td className="mono">{drone.serial}</td>
-                <td className="mono">{drone.status}</td>
+                <td>{statusLabel(drone.status)}</td>
                 <td className="mono">{drone.flight_hours}</td>
                 <td className="mono">{drone.missions_flown}</td>
                 {isAdmin && (
@@ -266,7 +267,7 @@ export function FleetPage() {
                 >
                   {STATUSES.map((status) => (
                     <option key={status} value={status}>
-                      {status}
+                      {statusLabel(status)}
                     </option>
                   ))}
                 </select>

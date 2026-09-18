@@ -41,7 +41,7 @@ describe('MissionAircraft', () => {
     expect(await screen.findByText(fixtureDrone.name)).toBeInTheDocument()
     expect(screen.getByText(fixtureDrone.model)).toBeInTheDocument()
     expect(screen.getByText(fixtureDrone.serial)).toBeInTheDocument()
-    expect(screen.getByText('available')).toBeInTheDocument()
+    expect(screen.getByText('Available')).toBeInTheDocument()
   })
 
   it('shows the hours the airframe has on it', async () => {

@@ -4,6 +4,7 @@ import { getMission, publishMission, updateMission } from '../api/missions'
 import { listUsers } from '../api/users'
 import { useAuth } from '../auth/useAuth'
 import { ConfirmDialog } from '../components/ConfirmDialog'
+import { statusLabel } from '../format/status'
 import { MapView } from '../map/MapView'
 import { MissionAircraft } from '../missions/MissionAircraft'
 import { downloadPlan } from '../missions/downloadPlan'
@@ -204,7 +205,7 @@ export function MissionDetailPage() {
         </div>
       </div>
       {saveError && <p className="auth-error">{saveError}</p>}
-      <p className="text-dim mono">{mission.status}</p>
+      <p className="text-dim">{statusLabel(mission.status)}</p>
 
       <PlanSummary waypoints={mission.waypoints} />
 

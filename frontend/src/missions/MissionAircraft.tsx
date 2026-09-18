@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { getDrone } from '../api/drones'
 import { useAuth } from '../auth/useAuth'
 import { findAircraft } from '../fleet/aircraft'
+import { statusLabel } from '../format/status'
 import { summarisePlan } from '../planning/missionStats'
 import { footprintWidthM, gsdCmPerPixel } from '../planning/payloads'
 import type { Drone } from '../types/drone'
@@ -67,7 +68,7 @@ export function MissionAircraft({ mission }: MissionAircraftProps) {
                 <dt>Serial</dt>
                 <dd className="mono">{drone.serial}</dd>
                 <dt>Status</dt>
-                <dd className="mono">{drone.status}</dd>
+                <dd>{statusLabel(drone.status)}</dd>
                 <dt>Airframe hours</dt>
                 <dd className="mono">{drone.flight_hours} h</dd>
                 <dt>Missions flown</dt>

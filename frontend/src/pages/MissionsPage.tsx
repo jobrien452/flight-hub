@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { deleteMission, listMissions, publishMission } from '../api/missions'
 import { useAuth } from '../auth/useAuth'
 import { ConfirmDialog } from '../components/ConfirmDialog'
+import { statusLabel } from '../format/status'
 import type { MissionSummary } from '../types/mission'
 import './MissionsPage.css'
 
@@ -186,7 +187,7 @@ export function MissionsPage() {
                 <td>
                   <Link to={`/missions/${mission.id}`}>{mission.name}</Link>
                 </td>
-                <td className="mono">{mission.status}</td>
+                <td>{statusLabel(mission.status)}</td>
                 <td>{mission.assigned_pilot_ids.length}</td>
                 <td className="mono">{mission.waypoint_count}</td>
                 <td className="mono">{new Date(mission.updated_at).toLocaleDateString()}</td>

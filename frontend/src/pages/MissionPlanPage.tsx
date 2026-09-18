@@ -4,6 +4,7 @@ import { assignPilot, getMission, unassignPilot } from '../api/missions'
 import { listUsers } from '../api/users'
 import { useAuth } from '../auth/useAuth'
 import { ConfirmDialog } from '../components/ConfirmDialog'
+import { statusLabel } from '../format/status'
 import { MapView } from '../map/MapView'
 import { PlanSummary } from '../missions/PlanSummary'
 import type { Mission } from '../types/mission'
@@ -68,7 +69,7 @@ export function MissionPlanPage() {
       <div className="page-header">
         <div>
           <h1>{mission.name}</h1>
-          <p className="text-dim mono">{mission.status}</p>
+          <p className="text-dim">{statusLabel(mission.status)}</p>
         </div>
         <Link className="button" to={`/missions/${mission.id}`}>
           Back to mission

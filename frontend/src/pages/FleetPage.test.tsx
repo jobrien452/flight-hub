@@ -90,7 +90,8 @@ describe('FleetPage', () => {
     await screen.findByText(fixtureDrone.name)
 
     expect(screen.queryByLabelText(/status for/i)).not.toBeInTheDocument()
-    expect(screen.getByText('available')).toBeInTheDocument()
+    // shown as words, the wire value stays snake_case underneath
+    expect(screen.getByText('Available')).toBeInTheDocument()
   })
 
   it('renames a drone from the edit window', async () => {
@@ -121,7 +122,7 @@ describe('FleetPage', () => {
     await userEvent.selectOptions(dialog.getByLabelText(/status/i), 'maintenance')
     await userEvent.click(dialog.getByRole('button', { name: /save/i }))
 
-    expect(await screen.findByText('maintenance')).toBeInTheDocument()
+    expect(await screen.findByText('Maintenance')).toBeInTheDocument()
   })
 
   it('says an aircraft that has flown is kept for its history', async () => {
