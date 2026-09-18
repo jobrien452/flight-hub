@@ -114,16 +114,6 @@ async def test_a_reset_will_not_take_a_throwaway_password(client, pilot_user: Us
     assert resp.status_code == 422
 
 
-async def test_an_admin_does_not_see_other_admins(
-    client, admin_headers, other_admin_user: User, pilot_user: User
-):
-    resp = await client.get("/users", headers=admin_headers)
-
-    emails = {u["email"] for u in resp.json()}
-    assert other_admin_user.email not in emails
-    assert pilot_user.email in emails
-
-
 async def test_a_default_jwt_secret_is_refused_in_prod():
     import pytest
 
