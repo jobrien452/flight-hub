@@ -1,0 +1,13 @@
+# plain-http local run, no domain or certs needed:
+#   docker compose -f docker-compose.yml -f docker-compose.local.yml up --build
+# then open http://localhost
+services:
+  frontend:
+    ports: !override
+      - "80:80"
+    volumes: !override
+      - ./frontend/nginx.local.conf.template:/etc/nginx/templates/default.conf.template:ro
+
+  # no cert to renew locally
+  certbot:
+    profiles: ["disabled"]
