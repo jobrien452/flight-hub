@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { createDrone, deleteDrone, listDrones, updateDrone } from '../api/drones'
 import { useAuth } from '../auth/useAuth'
 import { ConfirmDialog } from '../components/ConfirmDialog'
+import { AIRCRAFT } from '../fleet/aircraft'
 import type { Drone, DroneStatus } from '../types/drone'
 import './FleetPage.css'
 import './MissionsPage.css'
@@ -171,7 +172,16 @@ export function FleetPage() {
               </label>
               <label>
                 Model
-                <input value={model} onChange={(e) => setModel(e.target.value)} />
+                <input
+                  list="flyby-aircraft"
+                  value={model}
+                  onChange={(e) => setModel(e.target.value)}
+                />
+                <datalist id="flyby-aircraft">
+                  {AIRCRAFT.map((aircraft) => (
+                    <option key={aircraft.model} value={aircraft.model} />
+                  ))}
+                </datalist>
               </label>
               <label>
                 Serial

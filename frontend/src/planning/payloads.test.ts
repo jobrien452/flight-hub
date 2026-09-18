@@ -28,6 +28,26 @@ describe('payload catalogue', () => {
     }
   })
 
+  it('carries the payloads flyby integrates on the f-11', () => {
+    const ids = PAYLOADS.map((p) => p.id)
+    expect(ids).toContain('gremsy-vio-eo')
+    expect(ids).toContain('gremsy-vio-ir')
+  })
+
+  it('sizes the thermal sensor off its 12 micron pitch', () => {
+    const ir = findPayload('gremsy-vio-ir')!
+    expect(ir.image_width_px).toBe(640)
+    expect(ir.sensor_width_mm).toBeCloseTo(640 * 0.012, 3)
+    expect(ir.sensor_height_mm).toBeCloseTo(512 * 0.012, 3)
+  })
+
+  it('reads the thermal frame far coarser than the mapping camera', () => {
+    // 640 pixels across against 9504, the sweep has to fly lower to match it
+    expect(gsdCmPerPixel(findPayload('gremsy-vio-ir')!, 100)).toBeGreaterThan(
+      gsdCmPerPixel(lr1, 100) * 4,
+    )
+  })
+
   it('looks an entry up by id', () => {
     expect(findPayload('sony-ilx-lr1-24')?.camera).toBe('Sony ILX-LR1')
     expect(findPayload('nope')).toBeUndefined()

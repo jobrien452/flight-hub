@@ -32,6 +32,32 @@ export const PAYLOADS: CataloguePayload[] = [
     focal_length_mm: 35,
   },
   {
+    // flyby's own integration list, the block camera at its wide end
+    id: 'gremsy-vio-eo',
+    name: 'Gremsy VIO 4K zoom',
+    camera: 'Sony 4K block camera, 20x optical',
+    lens: '4.4-88.4mm zoom',
+    gimbal: 'Gremsy VIO 3 axis',
+    sensor_width_mm: 5.76,
+    sensor_height_mm: 3.24,
+    image_width_px: 3840,
+    image_height_px: 2160,
+    focal_length_mm: 4.4,
+  },
+  {
+    // the same payload's thermal side, sensor size is 640 x 512 at a 12um pitch
+    id: 'gremsy-vio-ir',
+    name: 'Gremsy VIO thermal 640',
+    camera: 'FLIR Boson 640R radiometric',
+    lens: '14mm, 32 deg horizontal',
+    gimbal: 'Gremsy VIO 3 axis',
+    sensor_width_mm: 7.68,
+    sensor_height_mm: 6.144,
+    image_width_px: 640,
+    image_height_px: 512,
+    focal_length_mm: 14,
+  },
+  {
     id: 'zenmuse-p1-35',
     name: 'DJI Zenmuse P1 + 35mm',
     camera: 'DJI Zenmuse P1',

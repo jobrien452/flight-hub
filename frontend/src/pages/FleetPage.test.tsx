@@ -57,6 +57,21 @@ describe('FleetPage', () => {
     expect(await screen.findByText('Falcon 2')).toBeInTheDocument()
   })
 
+  it('offers the flyby models on the model field', async () => {
+    renderPage()
+    await screen.findByText(fixtureDrone.name)
+
+    await userEvent.click(screen.getByRole('button', { name: /add drone/i }))
+    const input = within(screen.getByRole('dialog')).getByLabelText(/model/i)
+    const listId = input.getAttribute('list')
+    expect(listId).toBeTruthy()
+
+    const list = document.getElementById(listId!)
+    expect(list).not.toBeNull()
+    expect(list!.querySelector('option[value="F-11T"]')).not.toBeNull()
+    expect(list!.querySelector('option[value="F-11S"]')).not.toBeNull()
+  })
+
   it('takes a drone out of rotation', async () => {
     renderPage()
     await screen.findByText(fixtureDrone.name)

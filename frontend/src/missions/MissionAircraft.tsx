@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { getDrone } from '../api/drones'
 import { useAuth } from '../auth/useAuth'
+import { findAircraft } from '../fleet/aircraft'
 import { summarisePlan } from '../planning/missionStats'
 import { footprintWidthM, gsdCmPerPixel } from '../planning/payloads'
 import type { Drone } from '../types/drone'
@@ -36,6 +37,8 @@ export function MissionAircraft({ mission }: MissionAircraftProps) {
   }, [session, mission.drone_id])
 
   const { payload } = mission
+  // only for the aircraft flyby publish figures for, anything else is left alone
+  const specs = drone ? findAircraft(drone.model) : undefined
   // the height the route actually flies, which is what the optics depend on
   const altitude = summarisePlan(mission.waypoints).maxAltitude
 
@@ -61,6 +64,20 @@ export function MissionAircraft({ mission }: MissionAircraftProps) {
                 <dd className="mono">{drone.flight_hours} h</dd>
                 <dt>Missions flown</dt>
                 <dd className="mono">{drone.missions_flown}</dd>
+                {specs && (
+                  <>
+                    <dt>Max flight time</dt>
+                    <dd className="mono">{specs.maxFlightTimeMin} min</dd>
+                    <dt>Max speed</dt>
+                    <dd className="mono">{specs.maxSpeedKph} km/h</dd>
+                    <dt>Payload capacity</dt>
+                    <dd className="mono">{specs.payloadCapacityLbs} lbs</dd>
+                    <dt>Compute</dt>
+                    <dd>{specs.processor}</dd>
+                    <dt>Position</dt>
+                    <dd>{specs.positionAccuracy}</dd>
+                  </>
+                )}
               </dl>
             </>
           )}

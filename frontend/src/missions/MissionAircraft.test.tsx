@@ -68,6 +68,26 @@ describe('MissionAircraft', () => {
     expect(screen.getByText(/100 m/)).toBeInTheDocument()
   })
 
+  it('adds the airframe figures for an aircraft flyby publishes', async () => {
+    server.use(
+      http.get(`${API_URL}/drones/:id`, () =>
+        HttpResponse.json({ ...fixtureDrone, model: 'F-11T' }),
+      ),
+    )
+    renderPanel()
+
+    expect(await screen.findByText('56 min')).toBeInTheDocument()
+    expect(screen.getByText('80 km/h')).toBeInTheDocument()
+    expect(screen.getByText('5.7 lbs')).toBeInTheDocument()
+  })
+
+  it('keeps quiet about an airframe it has no figures for', async () => {
+    renderPanel()
+
+    await screen.findByText(fixtureDrone.model)
+    expect(screen.queryByText('Max flight time')).not.toBeInTheDocument()
+  })
+
   it('says when nothing is booked yet', async () => {
     renderPanel({ drone_id: null, payload: null })
 
