@@ -57,9 +57,14 @@ What you need locally:
 
 Local Deployment
 
-```cp backend/.env.dev.example backend/.env```
+- Copy all .env examples into new .env files
+For the backend specifically use the .dev.example
+locations are root, /backend, /frontend
 
-```docker compose up --build -d```
+- Update backend\migrations\0001_preload_invited_users.py with your email of choice
+
+Then run:
+```docker compose -f docker-compose.yml -f docker-compose.local.yml up --build -d``
 
 Locally web is accessible at localhost and api at localhost:8000 or localhost/api
 
