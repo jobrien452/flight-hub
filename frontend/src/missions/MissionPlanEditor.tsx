@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { listDrones } from '../api/drones'
+import { useAuth } from '../auth/useAuth'
 import { MapView } from '../map/MapView'
 import { generateCorridorPlan, generateSurveyPlan } from '../planning/flightPlanGenerators'
+import { PAYLOADS, findPayload, footprintWidthM, gsdCmPerPixel } from '../planning/payloads'
 import {
   createCorridorTool,
   createRectangleSurveyTool,
@@ -10,9 +13,11 @@ import {
   type MapTool,
   type ToolOverlay,
 } from '../tools/MapTool'
+import type { Drone } from '../types/drone'
 import type {
   CorridorPlanParams,
   Mission,
+  Payload,
   PlanParams,
   SurveyPlanParams,
   Waypoint,
@@ -41,6 +46,8 @@ const TOOL_HELP: Record<ToolId, string> = {
 export interface MissionPlanEditorValue {
   name: string
   assignedPilotIds: string[]
+  droneId: string | null
+  payload: Payload | null
   waypoints: Waypoint[]
   planParams: PlanParams | null
 }
@@ -64,7 +71,14 @@ export function MissionPlanEditor({
   onPublish,
   publishing = false,
 }: MissionPlanEditorProps) {
+  const { session } = useAuth()
   const [name, setName] = useState(mission?.name ?? '')
+  const [droneId, setDroneId] = useState(mission?.drone_id ?? '')
+  const [payloadId, setPayloadId] = useState(
+    // a loaded mission stores the payload itself, match it back to the catalogue
+    PAYLOADS.find((p) => p.name === mission?.payload?.name)?.id ?? '',
+  )
+  const [drones, setDrones] = useState<Drone[]>([])
   // carried through untouched, pilots are assigned from the plan page, not here
   const assignedPilotIds = mission?.assigned_pilot_ids ?? []
   const [waypoints, setWaypoints] = useState<Waypoint[]>(mission?.waypoints ?? [])
@@ -96,6 +110,11 @@ export function MissionPlanEditor({
   useEffect(() => {
     waypointsRef.current = waypoints
   }, [waypoints])
+
+  useEffect(() => {
+    if (!session) return
+    listDrones(session.token).then(setDrones).catch(() => setDrones([]))
+  }, [session])
 
   const getSettings = useCallback(() => settingsRef.current, [])
   const getWaypoints = useCallback(() => waypointsRef.current, [])
@@ -220,11 +239,24 @@ export function MissionPlanEditor({
   }
 
   function currentValue(): MissionPlanEditorValue {
-    return { name, assignedPilotIds, waypoints, planParams }
+    return {
+      name,
+      assignedPilotIds,
+      droneId: droneId || null,
+      payload: findPayload(payloadId) ?? null,
+      waypoints,
+      planParams,
+    }
   }
 
   const selectedWaypoint = selectedIndex === null ? undefined : waypoints[selectedIndex]
-  const readyToPublish = name.trim().length > 0 && waypoints.length > 0
+  // a pilot cannot fly a plan that names no aircraft, so publishing waits for one.
+  // saving is deliberately not gated, a draft may sit half finished
+  const readyToPublish = name.trim().length > 0 && waypoints.length > 0 && droneId !== ''
+  const payload = findPayload(payloadId)
+  // only a free aircraft can be booked, but whatever is already on the mission
+  // stays listed so the current booking is always something the picker can show
+  const bookable = drones.filter((d) => d.status === 'available' || d.id === droneId)
   const canPublish = onPublish && mission && mission.status === 'draft'
 
   // the generate step belongs to the tool that drew the draft, so it is offered
@@ -248,6 +280,52 @@ export function MissionPlanEditor({
             onChange={(e) => setName(e.target.value)}
           />
         </label>
+
+        <fieldset>
+          <legend>Aircraft</legend>
+          <label htmlFor="mission-aircraft">Aircraft</label>
+          <select
+            id="mission-aircraft"
+            value={droneId}
+            onChange={(e) => setDroneId(e.target.value)}
+          >
+            <option value="">No aircraft booked</option>
+            {bookable.map((drone) => (
+              <option key={drone.id} value={drone.id}>
+                {drone.name} ({drone.model})
+              </option>
+            ))}
+          </select>
+
+          <label htmlFor="mission-payload">Payload</label>
+          <select
+            id="mission-payload"
+            value={payloadId}
+            onChange={(e) => setPayloadId(e.target.value)}
+          >
+            <option value="">No payload</option>
+            {PAYLOADS.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.name}
+              </option>
+            ))}
+          </select>
+
+          {payload && (
+            <dl className="payload-specs">
+              <dt>Gimbal</dt>
+              <dd>{payload.gimbal}</dd>
+              <dt>Sensor</dt>
+              <dd className="mono">
+                {payload.image_width_px} x {payload.image_height_px} px
+              </dd>
+              <dt>Ortho GSD</dt>
+              <dd className="mono">{gsdCmPerPixel(payload, altitude).toFixed(2)} cm/px</dd>
+              <dt>Frame width</dt>
+              <dd className="mono">{footprintWidthM(payload, altitude).toFixed(0)} m</dd>
+            </dl>
+          )}
+        </fieldset>
 
         <fieldset>
           <legend>Tool</legend>

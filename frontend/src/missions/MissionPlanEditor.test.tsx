@@ -2,8 +2,11 @@
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { http, HttpResponse } from 'msw'
+import { API_URL } from '../api/client'
 import { AuthProvider } from '../auth/AuthContext'
-import { fixtureMission, fixtureUsers } from '../mocks/handlers'
+import { fixtureDrone, fixtureMission, fixtureUsers } from '../mocks/handlers'
+import { server } from '../mocks/server'
 import type { Mission } from '../types/mission'
 import { MissionPlanEditor } from './MissionPlanEditor'
 
@@ -424,7 +427,7 @@ describe('MissionPlanEditor publishing', () => {
 
   it('publishes with whatever is currently in the editor', async () => {
     const onPublish = vi.fn()
-    renderEditor(vi.fn(), fixtureMission, onPublish)
+    renderEditor(vi.fn(), { ...fixtureMission, drone_id: fixtureDrone.id }, onPublish)
     await userEvent.click(await screen.findByRole('button', { name: 'Publish' }))
 
     expect(onPublish).toHaveBeenCalledWith(
@@ -770,5 +773,92 @@ describe('an ungenerated draft does not survive the tool it was drawn with', () 
     await userEvent.click(screen.getByRole('button', { name: 'Rectangle Survey' }))
 
     expect(screen.queryByRole('button', { name: 'Generate Survey' })).not.toBeInTheDocument()
+  })
+})
+
+describe('aircraft and payload', () => {
+  const free = { ...fixtureDrone, id: 'drone-free', name: 'Falcon 1', status: 'available' }
+  const grounded = { ...fixtureDrone, id: 'drone-down', name: 'Falcon 2', status: 'maintenance' }
+
+  function serveDrones(drones: unknown[]) {
+    server.use(http.get(`${API_URL}/drones`, () => HttpResponse.json(drones)))
+  }
+
+  it('only offers drones that are free to book', async () => {
+    serveDrones([free, grounded])
+    renderEditor()
+
+    const picker = await screen.findByLabelText(/aircraft/i)
+    expect(within(picker).getByRole('option', { name: /Falcon 1/ })).toBeInTheDocument()
+    expect(within(picker).queryByRole('option', { name: /Falcon 2/ })).not.toBeInTheDocument()
+  })
+
+  it('still lists the drone already booked even once it is busy', async () => {
+    serveDrones([free, grounded])
+    renderEditor(vi.fn(), { ...fixtureMission, drone_id: 'drone-down' })
+
+    const picker = await screen.findByLabelText(/aircraft/i)
+    expect(within(picker).getByRole('option', { name: /Falcon 2/ })).toBeInTheDocument()
+  })
+
+  it('hands the booked aircraft back on save', async () => {
+    serveDrones([free])
+    const onSubmit = renderEditor()
+
+    await userEvent.selectOptions(await screen.findByLabelText(/aircraft/i), 'drone-free')
+    await userEvent.click(screen.getByRole('button', { name: 'Create' }))
+
+    expect(onSubmit.mock.calls[0][0].droneId).toBe('drone-free')
+  })
+
+  it('works out the ground sample distance for the payload picked', async () => {
+    renderEditor()
+
+    await userEvent.selectOptions(await screen.findByLabelText(/payload/i), 'sony-ilx-lr1-24')
+
+    // 50m default altitude on the 24mm gives just under a centimetre per pixel
+    expect(await screen.findByText(/0\.79 cm\/px/i)).toBeInTheDocument()
+    expect(screen.getByText(/Gremsy Pixy/)).toBeInTheDocument()
+  })
+
+  it('hands the payload back on save', async () => {
+    const onSubmit = renderEditor()
+
+    await userEvent.selectOptions(await screen.findByLabelText(/payload/i), 'sony-ilx-lr1-24')
+    await userEvent.click(screen.getByRole('button', { name: 'Create' }))
+
+    expect(onSubmit.mock.calls[0][0].payload).toMatchObject({
+      camera: 'Sony ILX-LR1',
+      gimbal: 'Gremsy Pixy',
+    })
+  })
+
+  it('says nothing about optics until a payload is chosen', () => {
+    renderEditor()
+    expect(screen.queryByText(/cm\/px/i)).not.toBeInTheDocument()
+  })
+})
+
+describe('publishing needs an aircraft', () => {
+  const free = { ...fixtureDrone, id: 'drone-free', name: 'Falcon 1', status: 'available' }
+
+  it('keeps publish disabled until one is booked', async () => {
+    server.use(http.get(`${API_URL}/drones`, () => HttpResponse.json([free])))
+    const onPublish = vi.fn()
+    renderEditor(vi.fn(), { ...fixtureMission, status: 'draft', drone_id: null }, onPublish)
+
+    expect(screen.getByRole('button', { name: 'Publish' })).toBeDisabled()
+
+    await userEvent.selectOptions(await screen.findByLabelText(/aircraft/i), 'drone-free')
+
+    expect(screen.getByRole('button', { name: 'Publish' })).toBeEnabled()
+  })
+
+  it('still lets the mission be saved with no aircraft', async () => {
+    const onSubmit = renderEditor(vi.fn(), { ...fixtureMission, status: 'draft', drone_id: null })
+
+    await userEvent.click(screen.getByRole('button', { name: 'Create' }))
+
+    expect(onSubmit).toHaveBeenCalled()
   })
 })

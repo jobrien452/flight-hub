@@ -7,6 +7,20 @@ export type MissionStatus =
   | 'in_flight'
   | 'completed'
 
+// what the aircraft is carrying. the sensor numbers ride along rather than being
+// looked up, so an old mission still reads right if the catalogue changes
+export interface Payload {
+  name: string
+  camera: string
+  lens: string
+  gimbal: string
+  sensor_width_mm: number
+  sensor_height_mm: number
+  image_width_px: number
+  image_height_px: number
+  focal_length_mm: number
+}
+
 export interface Waypoint {
   lat: number
   lng: number
@@ -54,6 +68,7 @@ export interface MissionSummary {
 }
 
 export interface Mission extends MissionSummary {
+  payload: Payload | null
   waypoints: Waypoint[]
   plan_params: PlanParams | null
 }
@@ -63,6 +78,7 @@ export interface MissionCreateInput {
   name: string
   assigned_pilot_ids?: string[]
   drone_id?: string | null
+  payload?: Payload | null
   waypoints?: Waypoint[]
   plan_params?: PlanParams
 }
@@ -71,6 +87,7 @@ export interface MissionUpdateInput {
   name?: string
   assigned_pilot_ids?: string[]
   drone_id?: string | null
+  payload?: Payload | null
   waypoints?: Waypoint[]
   plan_params?: PlanParams
 }

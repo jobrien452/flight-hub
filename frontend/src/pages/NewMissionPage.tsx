@@ -19,6 +19,8 @@ export function NewMissionPage() {
         {
           name: value.name,
           assigned_pilot_ids: value.assignedPilotIds,
+          drone_id: value.droneId,
+          payload: value.payload,
           waypoints: value.waypoints,
           plan_params: value.planParams ?? undefined,
         },

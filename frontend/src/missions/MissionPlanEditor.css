@@ -223,3 +223,27 @@
   font-size: 11px;
   line-height: 1.35;
 }
+
+/* the sensor numbers that follow from the payload, laid out like a spec sheet */
+.payload-specs {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px 10px;
+  margin: 2px 0 0;
+  font-size: 11px;
+}
+
+.payload-specs dt {
+  color: var(--text-dim);
+}
+
+.payload-specs dd {
+  margin: 0;
+  text-align: right;
+}
+
+.plan-editor-panel fieldset > label[for] {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}

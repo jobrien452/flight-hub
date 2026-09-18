@@ -2,11 +2,8 @@ import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { http, HttpResponse } from 'msw'
-import { API_URL } from '../api/client'
 import { AuthProvider } from '../auth/AuthContext'
-import { fixtureDrone, fixtureMission } from '../mocks/handlers'
-import { server } from '../mocks/server'
+import { fixtureMission } from '../mocks/handlers'
 import { MissionPlanPage } from './MissionPlanPage'
 
 vi.mock('../map/MapView', () => ({
@@ -131,32 +128,5 @@ describe('MissionPlanPage', () => {
       'href',
       `/missions/${fixtureMission.id}`,
     )
-  })
-})
-
-describe('booking an aircraft', () => {
-  it('offers the fleet and books the one the admin picks', async () => {
-    renderPage()
-    await screen.findByRole('heading', { name: fixtureMission.name })
-
-    await userEvent.selectOptions(await screen.findByLabelText(/aircraft/i), fixtureDrone.id)
-
-    expect(await screen.findByDisplayValue(/falcon 1/i)).toBeInTheDocument()
-  })
-
-  it('can hand the aircraft back', async () => {
-    server.use(
-      http.get(`${API_URL}/missions/:id`, () =>
-        HttpResponse.json({ ...fixtureMission, drone_id: fixtureDrone.id }),
-      ),
-    )
-    renderPage()
-    await screen.findByRole('heading', { name: fixtureMission.name })
-
-    const picker = await screen.findByLabelText(/aircraft/i)
-    expect(picker).toHaveValue(fixtureDrone.id)
-
-    await userEvent.selectOptions(picker, '')
-    expect(picker).toHaveValue('')
   })
 })

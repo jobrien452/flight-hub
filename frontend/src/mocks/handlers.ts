@@ -15,6 +15,7 @@ export const fixtureMission: Mission = {
   assigned_pilot_ids: ['pilot-1'],
   drone_id: null,
   waypoint_count: 1,
+  payload: null,
   waypoints: [{ lat: 1, lng: 2, alt: 10 }],
   plan_params: null,
   created_at: '2026-01-01T00:00:00Z',
