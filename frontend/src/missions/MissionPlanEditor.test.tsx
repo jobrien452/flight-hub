@@ -389,6 +389,17 @@ describe('MissionPlanEditor select tool', () => {
     expect(onSubmit.mock.calls[0][0].waypoints[1].photo).toBeFalsy()
   })
 
+  it('holds the payload fields to what a camera can actually do', async () => {
+    renderEditor()
+    await placeTwoAndSelect('grab second')
+    await userEvent.click(screen.getByRole('button', { name: 'Edit details' }))
+
+    const drawer = screen.getByRole('complementary', { name: 'Waypoint 2 details' })
+    // 1x is the lens itself, anything under that is not a zoom the camera has
+    expect(within(drawer).getByLabelText('Zoom (x)')).toHaveAttribute('min', '1')
+    expect(within(drawer).getByLabelText('Gimbal pitch (deg)')).toHaveAttribute('min', '-90')
+  })
+
   it('closes the drawer', async () => {
     renderEditor()
     await placeTwoAndSelect('grab second')

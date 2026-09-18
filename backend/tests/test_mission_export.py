@@ -100,16 +100,68 @@ async def test_a_photo_and_a_zoom_share_one_camera_command(
     assert float(camera[8]) == 1  # shoot now
 
 
-async def test_a_speed_change_is_written_out(client, admin_headers, flyable_mission: Mission):
+async def test_a_speed_change_is_set_on_the_way_in(client, admin_headers, flyable_mission: Mission):
     await with_route(flyable_mission, [{"lat": 1.0, "lng": 2.0, "alt": 30, "speed": 6}])
 
     rows = lines((await client.get(
         f"/missions/{flyable_mission.id}/export", headers=admin_headers
     )).text)[1:]
 
-    speed = rows[2]
+    # speed belongs to the leg flown into the point, so it is set before it and
+    # not after, which is also how the editor works the flight time out
+    speed = rows[1]
     assert speed[3] == "178"  # MAV_CMD_DO_CHANGE_SPEED
     assert float(speed[5]) == 6
+    assert rows[2][3] == "16"  # the waypoint it applies to follows it
+
+
+async def test_the_payload_commands_still_follow_their_waypoint(
+    client, admin_headers, flyable_mission: Mission
+):
+    await with_route(
+        flyable_mission,
+        [{"lat": 1.0, "lng": 2.0, "alt": 30, "speed": 6, "gimbal_pitch": -90, "photo": True}],
+    )
+
+    rows = lines((await client.get(
+        f"/missions/{flyable_mission.id}/export", headers=admin_headers
+    )).text)[1:]
+
+    # speed, the waypoint, then what the payload does once it is reached
+    assert [row[3] for row in rows] == ["16", "178", "16", "205", "203"]
+
+
+async def test_a_command_row_carries_no_frame_of_its_own(
+    client, admin_headers, flyable_mission: Mission
+):
+    await with_route(flyable_mission, [{"lat": 1.0, "lng": 2.0, "alt": 30, "gimbal_pitch": -90}])
+
+    rows = lines((await client.get(
+        f"/missions/{flyable_mission.id}/export", headers=admin_headers
+    )).text)[1:]
+
+    # a do command has no position, so it takes the global frame like mission
+    # planner writes rather than claiming a height relative to home
+    assert rows[2][2] == "0"
+
+
+async def test_the_rows_are_numbered_straight_through(
+    client, admin_headers, flyable_mission: Mission
+):
+    await with_route(
+        flyable_mission,
+        [
+            {"lat": 1.0, "lng": 2.0, "alt": 30},
+            {"lat": 1.1, "lng": 2.1, "alt": 30, "photo": True},
+            {"lat": 1.2, "lng": 2.2, "alt": 30},
+        ],
+    )
+
+    rows = lines((await client.get(
+        f"/missions/{flyable_mission.id}/export", headers=admin_headers
+    )).text)[1:]
+
+    assert [row[0] for row in rows] == [str(i) for i in range(len(rows))]
 
 
 async def test_a_plain_waypoint_carries_no_commands(

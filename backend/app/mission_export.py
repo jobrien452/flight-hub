@@ -30,12 +30,18 @@ def _row(index: int, command: int, frame: int, params: list[float], current: int
     )
 
 
-def _actions(point: Waypoint) -> list[tuple[int, list[float]]]:
-    # do commands run when the waypoint before them is reached, so they are
-    # written after it rather than before
+# a do command runs when the nav command above it is reached, so where it sits
+# decides whether it applies to the leg into a waypoint or the one out of it
+def _before(point: Waypoint) -> list[tuple[int, list[float]]]:
+    # speed is the leg flown into the point, the same way the editor reads it
+    # when it works the flight time out
+    if not point.speed:
+        return []
+    return [(DO_CHANGE_SPEED, [SPEED_TYPE_GROUND, point.speed])]
+
+
+def _on_arrival(point: Waypoint) -> list[tuple[int, list[float]]]:
     actions: list[tuple[int, list[float]]] = []
-    if point.speed:
-        actions.append((DO_CHANGE_SPEED, [SPEED_TYPE_GROUND, point.speed]))
     if point.gimbal_pitch is not None:
         actions.append((DO_MOUNT_CONTROL, [point.gimbal_pitch, 0, 0, 0, 0, 0, MOUNT_MODE_MAVLINK]))
     if point.photo or point.zoom:
@@ -63,6 +69,12 @@ def to_qgc_wpl(waypoints: list[Waypoint]) -> str:
     index += 1
 
     for point in waypoints:
+        # a do command has no position of its own, so it carries the global
+        # frame rather than claiming a height relative to home
+        for command, params in _before(point):
+            rows.append(_row(index, command, FRAME_GLOBAL, params))
+            index += 1
+
         rows.append(
             _row(
                 index,
@@ -72,8 +84,9 @@ def to_qgc_wpl(waypoints: list[Waypoint]) -> str:
             )
         )
         index += 1
-        for command, params in _actions(point):
-            rows.append(_row(index, command, FRAME_RELATIVE_ALT, params))
+
+        for command, params in _on_arrival(point):
+            rows.append(_row(index, command, FRAME_GLOBAL, params))
             index += 1
 
     return "\n".join(rows) + "\n"

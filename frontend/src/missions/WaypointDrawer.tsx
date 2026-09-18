@@ -83,6 +83,8 @@ export function WaypointDrawer({
         Gimbal pitch (deg)
         <input
           type="number"
+          min="-90"
+          max="30"
           placeholder="level"
           value={waypoint.gimbal_pitch ?? ''}
           onChange={(e) => onChange({ gimbal_pitch: toNumber(e.target.value) })}
@@ -93,7 +95,8 @@ export function WaypointDrawer({
         Zoom (x)
         <input
           type="number"
-          step="0.1"
+          min="1"
+          step="0.5"
           placeholder="none"
           value={waypoint.zoom ?? ''}
           onChange={(e) => onChange({ zoom: toNumber(e.target.value) })}
