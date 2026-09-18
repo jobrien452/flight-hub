@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { GuardedNavLink } from '../navigation/GuardedNavLink'
+import { useUnsavedChanges } from '../navigation/useUnsavedChanges'
 import type { LoginResponse } from '../types/auth'
 
 interface UserMenuProps {
@@ -12,6 +13,7 @@ interface UserMenuProps {
 export function UserMenu({ session, onSignOut }: UserMenuProps) {
   const [open, setOpen] = useState(false)
   const wrapper = useRef<HTMLDivElement>(null)
+  const { guard } = useUnsavedChanges()
 
   useEffect(() => {
     if (!open) return
@@ -46,15 +48,15 @@ export function UserMenu({ session, onSignOut }: UserMenuProps) {
       </button>
       {open && (
         <div className="user-menu-items" role="menu">
-          <Link role="menuitem" to="/profile" onClick={() => setOpen(false)}>
+          <GuardedNavLink role="menuitem" to="/profile" onClick={() => setOpen(false)}>
             Profile
-          </Link>
+          </GuardedNavLink>
           <button
             type="button"
             role="menuitem"
             onClick={() => {
               setOpen(false)
-              onSignOut()
+              guard(onSignOut)
             }}
           >
             Sign out

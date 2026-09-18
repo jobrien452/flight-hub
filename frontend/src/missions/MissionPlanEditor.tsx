@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { listDrones } from '../api/drones'
 import { useAuth } from '../auth/useAuth'
+import { useUnsavedWork } from '../navigation/useUnsavedChanges'
 import { MapView } from '../map/MapView'
 import { generateCorridorPlan, generateSurveyPlan } from '../planning/flightPlanGenerators'
 import {
@@ -255,6 +256,12 @@ export function MissionPlanEditor({
       planParams,
     }
   }
+
+  // everything the save would send, so a change to any of it counts as work at
+  // risk. the ref keeps what the editor opened with, which is what is stored
+  const edited = JSON.stringify([name, droneId, payloadId, waypoints, planParams])
+  const [opened] = useState(edited)
+  useUnsavedWork(edited !== opened)
 
   const selectedWaypoint = selectedIndex === null ? undefined : waypoints[selectedIndex]
   // a pilot cannot fly a plan that names no aircraft, so publishing waits for one.

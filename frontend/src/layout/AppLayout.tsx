@@ -1,5 +1,6 @@
-import { NavLink, Outlet } from 'react-router-dom'
+import { Outlet } from 'react-router-dom'
 import { useAuth } from '../auth/useAuth'
+import { GuardedNavLink } from '../navigation/GuardedNavLink'
 import { UserMenu } from './UserMenu'
 import './AppLayout.css'
 
@@ -9,23 +10,25 @@ export function AppLayout() {
   return (
     <div className="shell">
       <header className="topbar">
-        <span className="wordmark">FLYBY / MISSION CONTROL</span>
+        <GuardedNavLink to="/" className="wordmark">
+          FLYBY / MISSION CONTROL
+        </GuardedNavLink>
         <nav className="nav">
-          <NavLink to="/missions" className={({ isActive }) => (isActive ? 'active' : '')}>
+          <GuardedNavLink to="/missions" className={({ isActive }) => (isActive ? 'active' : '')}>
             Missions
-          </NavLink>
-          <NavLink to="/fleet" className={({ isActive }) => (isActive ? 'active' : '')}>
+          </GuardedNavLink>
+          <GuardedNavLink to="/fleet" className={({ isActive }) => (isActive ? 'active' : '')}>
             Fleet
-          </NavLink>
+          </GuardedNavLink>
           {session?.role === 'admin' && (
-            <NavLink to="/dashboard" className={({ isActive }) => (isActive ? 'active' : '')}>
+            <GuardedNavLink to="/dashboard" className={({ isActive }) => (isActive ? 'active' : '')}>
               Dashboard
-            </NavLink>
+            </GuardedNavLink>
           )}
           {session?.role === 'admin' && (
-            <NavLink to="/api-docs" className={({ isActive }) => (isActive ? 'active' : '')}>
+            <GuardedNavLink to="/api-docs" className={({ isActive }) => (isActive ? 'active' : '')}>
               API
-            </NavLink>
+            </GuardedNavLink>
           )}
         </nav>
         {session && <UserMenu session={session} onSignOut={() => setSession(null)} />}

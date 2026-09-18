@@ -3,6 +3,7 @@ import { Navigate, Route, Routes } from 'react-router-dom'
 import { AuthProvider } from './auth/AuthContext'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { AppLayout } from './layout/AppLayout'
+import { UnsavedChangesProvider } from './navigation/UnsavedChangesProvider'
 import { AcceptInvitePage } from './pages/AcceptInvitePage'
 import { DashboardPage } from './pages/DashboardPage'
 import { FleetPage } from './pages/FleetPage'
@@ -24,32 +25,34 @@ const ApiDocsPage = lazy(() =>
 function App() {
   return (
     <AuthProvider>
-      <Routes>
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/accept-invite" element={<AcceptInvitePage />} />
-        <Route path="/request-password-reset" element={<RequestPasswordResetPage />} />
-        <Route path="/reset-password" element={<ResetPasswordPage />} />
-        <Route element={<ProtectedRoute />}>
-          <Route element={<AppLayout />}>
-            <Route path="/" element={<Navigate to="/missions" replace />} />
-            <Route path="/missions" element={<MissionsPage />} />
-            <Route path="/missions/new" element={<NewMissionPage />} />
-            <Route path="/missions/:id" element={<MissionDetailPage />} />
-            <Route path="/missions/:id/plan" element={<MissionPlanPage />} />
-            <Route path="/dashboard" element={<DashboardPage />} />
-            <Route path="/fleet" element={<FleetPage />} />
-            <Route path="/profile" element={<ProfilePage />} />
-            <Route
-              path="/api-docs"
-              element={
-                <Suspense fallback={<p className="text-dim">Loading...</p>}>
-                  <ApiDocsPage />
-                </Suspense>
-              }
-            />
+      <UnsavedChangesProvider>
+        <Routes>
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/accept-invite" element={<AcceptInvitePage />} />
+          <Route path="/request-password-reset" element={<RequestPasswordResetPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
+          <Route element={<ProtectedRoute />}>
+            <Route element={<AppLayout />}>
+              <Route path="/" element={<Navigate to="/missions" replace />} />
+              <Route path="/missions" element={<MissionsPage />} />
+              <Route path="/missions/new" element={<NewMissionPage />} />
+              <Route path="/missions/:id" element={<MissionDetailPage />} />
+              <Route path="/missions/:id/plan" element={<MissionPlanPage />} />
+              <Route path="/dashboard" element={<DashboardPage />} />
+              <Route path="/fleet" element={<FleetPage />} />
+              <Route path="/profile" element={<ProfilePage />} />
+              <Route
+                path="/api-docs"
+                element={
+                  <Suspense fallback={<p className="text-dim">Loading...</p>}>
+                    <ApiDocsPage />
+                  </Suspense>
+                }
+              />
+            </Route>
           </Route>
-        </Route>
-      </Routes>
+        </Routes>
+      </UnsavedChangesProvider>
     </AuthProvider>
   )
 }

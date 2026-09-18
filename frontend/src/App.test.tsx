@@ -1,8 +1,10 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
+
+vi.mock('./map/MapView', () => ({ MapView: () => <div>map</div> }))
 
 const session = {
   token: 'fake-token',
@@ -35,6 +37,16 @@ describe('routing', () => {
     expect(screen.getByText('FLYBY / MISSION CONTROL')).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Missions' })).toBeInTheDocument()
     expect(screen.getByText('Ada Admin')).toBeInTheDocument()
+  })
+
+  it('takes the wordmark home', async () => {
+    localStorage.setItem('flyby.session', JSON.stringify(session))
+    renderApp('/fleet')
+    await screen.findByRole('heading', { name: 'Fleet' })
+
+    await userEvent.click(screen.getByRole('link', { name: /flyby/i }))
+
+    expect(await screen.findByRole('heading', { name: 'Missions' })).toBeInTheDocument()
   })
 
   it('redirects "/" to "/missions" for a signed in user', () => {
@@ -109,5 +121,40 @@ describe('profile', () => {
 
     await userEvent.click(screen.getByRole('button', { name: /Ada Admin/ }))
     expect(screen.getByRole('menuitem', { name: 'Profile' })).toBeInTheDocument()
+  })
+})
+
+describe('leaving an unsaved mission', () => {
+  beforeEach(() => {
+    localStorage.setItem('flyby.session', JSON.stringify(session))
+  })
+
+  it('warns before the nav takes you off a half built mission', async () => {
+    renderApp('/missions/new')
+    await userEvent.type(await screen.findByPlaceholderText('New Mission'), 'Site B')
+
+    await userEvent.click(screen.getByRole('link', { name: 'Fleet' }))
+
+    expect(screen.getByRole('dialog')).toHaveTextContent(/not been saved/i)
+    expect(screen.getByRole('heading', { name: 'Mission planning' })).toBeInTheDocument()
+  })
+
+  it('goes where you asked once you say so', async () => {
+    renderApp('/missions/new')
+    await userEvent.type(await screen.findByPlaceholderText('New Mission'), 'Site B')
+    await userEvent.click(screen.getByRole('link', { name: 'Fleet' }))
+
+    await userEvent.click(screen.getByRole('button', { name: 'Leave' }))
+
+    expect(await screen.findByRole('heading', { name: 'Fleet' })).toBeInTheDocument()
+  })
+
+  it('does not nag when the creator was never touched', async () => {
+    renderApp('/missions/new')
+    await screen.findByRole('heading', { name: 'Mission planning' })
+
+    await userEvent.click(screen.getByRole('link', { name: 'Fleet' }))
+
+    expect(await screen.findByRole('heading', { name: 'Fleet' })).toBeInTheDocument()
   })
 })

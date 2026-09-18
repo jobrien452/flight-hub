@@ -20,6 +20,12 @@
   font-size: 12px;
   letter-spacing: 0.08em;
   color: var(--text-dim);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.wordmark:hover {
+  color: var(--text);
 }
 
 .nav {

@@ -6,6 +6,8 @@ import { http, HttpResponse } from 'msw'
 import { API_URL } from '../api/client'
 import { AuthProvider } from '../auth/AuthContext'
 import { fixtureDrone, fixtureMission, fixtureUsers } from '../mocks/handlers'
+import { GuardedNavLink } from '../navigation/GuardedNavLink'
+import { UnsavedChangesProvider } from '../navigation/UnsavedChangesProvider'
 import { server } from '../mocks/server'
 import type { Mission } from '../types/mission'
 import { MissionPlanEditor } from './MissionPlanEditor'
@@ -948,5 +950,70 @@ describe('a booked aircraft is off the table', () => {
 
     const picker = await screen.findByLabelText(/aircraft/i)
     expect(within(picker).getByRole('option', { name: /Falcon 2/ })).toBeInTheDocument()
+  })
+})
+
+describe('MissionPlanEditor unsaved work', () => {
+  function renderGuarded(mission?: Mission) {
+    render(
+      <MemoryRouter>
+        <AuthProvider>
+          <UnsavedChangesProvider>
+            <GuardedNavLink to="/fleet">Fleet</GuardedNavLink>
+            <MissionPlanEditor
+              mission={mission}
+              submitting={false}
+              error={null}
+              submitLabel="Create"
+              onSubmit={vi.fn()}
+            />
+          </UnsavedChangesProvider>
+        </AuthProvider>
+      </MemoryRouter>,
+    )
+  }
+
+  async function leave() {
+    await userEvent.click(screen.getByRole('link', { name: 'Fleet' }))
+  }
+
+  it('lets you walk away from an editor you have not touched', async () => {
+    renderGuarded()
+    await leave()
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+
+  it('lets you walk away from a saved mission you only looked at', async () => {
+    renderGuarded(fixtureMission)
+    await leave()
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+
+  it('warns once the mission has been named', async () => {
+    renderGuarded()
+    await userEvent.type(screen.getByPlaceholderText('New Mission'), 'Site B')
+    await leave()
+
+    expect(screen.getByRole('dialog')).toHaveTextContent(/not been saved/i)
+  })
+
+  it('warns once a waypoint has been placed', async () => {
+    renderGuarded()
+    await activateWaypointTool()
+    await userEvent.click(screen.getByText('click A'))
+    await leave()
+
+    expect(screen.getByRole('dialog')).toHaveTextContent(/not been saved/i)
+  })
+
+  it('warns once the route of a saved mission has changed', async () => {
+    renderGuarded(fixtureMission)
+    await activateWaypointTool()
+    await userEvent.click(screen.getByText('click A'))
+    await leave()
+
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
   })
 })
