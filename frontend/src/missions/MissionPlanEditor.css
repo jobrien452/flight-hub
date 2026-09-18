@@ -249,11 +249,13 @@
 }
 
 /* the field that is holding the save up, and why */
-.plan-editor-panel input.needs-attention {
+.plan-editor-panel input.needs-attention,
+.plan-editor-panel select.needs-attention {
   border-color: var(--danger);
 }
 
-.plan-editor-panel input.needs-attention:focus {
+.plan-editor-panel input.needs-attention:focus,
+.plan-editor-panel select.needs-attention:focus {
   outline: none;
   border-color: var(--danger);
   box-shadow: 0 0 0 2px rgba(217, 105, 95, 0.25);

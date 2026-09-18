@@ -471,18 +471,32 @@ describe('MissionPlanEditor publishing', () => {
     expect(screen.queryByRole('button', { name: 'Publish' })).not.toBeInTheDocument()
   })
 
-  it('greys out publish until the mission has a name and waypoints', async () => {
-    renderEditor(vi.fn(), { ...fixtureMission, name: '', waypoints: [] }, vi.fn())
-    expect(await screen.findByRole('button', { name: 'Publish' })).toBeDisabled()
+  it('holds the publish back and says what is missing', async () => {
+    const onPublish = vi.fn()
+    renderEditor(vi.fn(), { ...fixtureMission, name: '', waypoints: [] }, onPublish)
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Publish' }))
+
+    expect(screen.getByText(/needs a name/i)).toBeInTheDocument()
+    expect(screen.getByText(/two waypoints/i)).toBeInTheDocument()
+    expect(onPublish).not.toHaveBeenCalled()
   })
 
   it('publishes with whatever is currently in the editor', async () => {
     const onPublish = vi.fn()
-    renderEditor(vi.fn(), { ...fixtureMission, drone_id: fixtureDrone.id }, onPublish)
+    const route = [
+      { lat: 1, lng: 2, alt: 10 },
+      { lat: 1.1, lng: 2.1, alt: 10 },
+    ]
+    renderEditor(
+      vi.fn(),
+      { ...fixtureMission, drone_id: fixtureDrone.id, waypoints: route },
+      onPublish,
+    )
     await userEvent.click(await screen.findByRole('button', { name: 'Publish' }))
 
     expect(onPublish).toHaveBeenCalledWith(
-      expect.objectContaining({ name: fixtureMission.name, waypoints: fixtureMission.waypoints }),
+      expect.objectContaining({ name: fixtureMission.name, waypoints: route }),
     )
   })
 })
@@ -895,16 +909,26 @@ describe('aircraft and payload', () => {
 describe('publishing needs an aircraft', () => {
   const free = { ...fixtureDrone, id: 'drone-free', name: 'Falcon 1', status: 'available' }
 
-  it('keeps publish disabled until one is booked', async () => {
+  it('will not publish until one is booked', async () => {
     server.use(http.get(`${API_URL}/drones`, () => HttpResponse.json([free])))
     const onPublish = vi.fn()
-    renderEditor(vi.fn(), { ...fixtureMission, status: 'draft', drone_id: null }, onPublish)
-
-    expect(screen.getByRole('button', { name: 'Publish' })).toBeDisabled()
+    const route = [
+      { lat: 1, lng: 2, alt: 10 },
+      { lat: 1.1, lng: 2.1, alt: 10 },
+    ]
+    renderEditor(
+      vi.fn(),
+      { ...fixtureMission, status: 'draft', drone_id: null, waypoints: route },
+      onPublish,
+    )
+    await userEvent.click(await screen.findByRole('button', { name: 'Publish' }))
+    expect(onPublish).not.toHaveBeenCalled()
+    expect(screen.getByText(/needs an aircraft/i)).toBeInTheDocument()
 
     await userEvent.selectOptions(await screen.findByLabelText(/aircraft/i), 'drone-free')
+    await userEvent.click(screen.getByRole('button', { name: 'Publish' }))
 
-    expect(screen.getByRole('button', { name: 'Publish' })).toBeEnabled()
+    expect(onPublish).toHaveBeenCalled()
   })
 
   it('still lets the mission be saved with no aircraft', async () => {
@@ -1069,55 +1093,77 @@ describe('MissionPlanEditor unsaved work', () => {
   })
 })
 
-describe('MissionPlanEditor naming', () => {
-  it('will not save a mission that has no name', async () => {
+describe('MissionPlanEditor what a mission needs', () => {
+  it('says nothing until you try', async () => {
     renderEditor()
+    await screen.findByLabelText(/payload/i)
 
-    expect(screen.getByRole('button', { name: 'Create' })).toBeDisabled()
-  })
-
-  it('will not take whitespace as a name either', async () => {
-    renderEditor()
-
-    await userEvent.type(screen.getByPlaceholderText('New Mission'), '   ')
-
-    expect(screen.getByRole('button', { name: 'Create' })).toBeDisabled()
-  })
-
-  it('saves once it has been given one', async () => {
-    const onSubmit = renderEditor()
-
-    await userEvent.type(screen.getByPlaceholderText('New Mission'), 'Survey Site A')
-    await userEvent.click(screen.getByRole('button', { name: 'Create' }))
-
-    expect(onSubmit.mock.calls[0][0].name).toBe('Survey Site A')
-  })
-
-  it('trims the name on the way out', async () => {
-    const onSubmit = renderEditor()
-
-    await userEvent.type(screen.getByPlaceholderText('New Mission'), '  Survey Site A  ')
-    await userEvent.click(screen.getByRole('button', { name: 'Create' }))
-
-    expect(onSubmit.mock.calls[0][0].name).toBe('Survey Site A')
-  })
-
-  it('says why the save is not available, next to the field that fixes it', async () => {
-    renderEditor()
-
-    const field = screen.getByPlaceholderText('New Mission')
-    expect(field).toBeInvalid()
-    expect(field).toHaveAccessibleDescription(/needs a name/i)
-  })
-
-  it('stops flagging the field once it has a name', async () => {
-    renderEditor()
-
-    await userEvent.type(screen.getByPlaceholderText('New Mission'), 'Survey Site A')
-
-    const field = screen.getByPlaceholderText('New Mission')
-    expect(field).toBeValid()
     expect(screen.queryByText(/needs a name/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/needs an aircraft/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/two waypoints/i)).not.toBeInTheDocument()
+  })
+
+  it('flags the name when save is pressed without one', async () => {
+    const onSubmit = renderEditor()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Create' }))
+
+    expect(screen.getByText(/needs a name/i)).toBeInTheDocument()
+    expect(screen.getByPlaceholderText('New Mission')).toBeInvalid()
+    expect(onSubmit).not.toHaveBeenCalled()
+  })
+
+  it('saves without an aircraft, a draft may sit half finished', async () => {
+    const onSubmit = renderEditor()
+
+    await userEvent.type(screen.getByPlaceholderText('New Mission'), 'Survey Site A')
+    await userEvent.click(screen.getByRole('button', { name: 'Create' }))
+
+    expect(onSubmit).toHaveBeenCalled()
+    expect(screen.queryByText(/needs an aircraft/i)).not.toBeInTheDocument()
+  })
+
+  it('clears the flag once the name is typed', async () => {
+    renderEditor()
+    await userEvent.click(screen.getByRole('button', { name: 'Create' }))
+
+    await userEvent.type(screen.getByPlaceholderText('New Mission'), 'Survey Site A')
+
+    expect(screen.queryByText(/needs a name/i)).not.toBeInTheDocument()
+  })
+
+  it('flags the aircraft and the route when publish is pressed', async () => {
+    const onPublish = vi.fn()
+    renderEditor(vi.fn(), fixtureMission, onPublish)
+    await screen.findByLabelText(/aircraft/i)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Publish' }))
+
+    expect(screen.getByText(/needs an aircraft/i)).toBeInTheDocument()
+    expect(screen.getByText(/two waypoints/i)).toBeInTheDocument()
+    expect(onPublish).not.toHaveBeenCalled()
+  })
+
+  it('publishes once it has everything', async () => {
+    const onPublish = vi.fn()
+    renderEditor(
+      vi.fn(),
+      {
+        ...fixtureMission,
+        drone_id: fixtureDrone.id,
+        waypoints: [
+          { lat: 1, lng: 2, alt: 10 },
+          { lat: 1.1, lng: 2.1, alt: 10 },
+        ],
+      },
+      onPublish,
+    )
+    await screen.findByLabelText(/aircraft/i)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Publish' }))
+
+    expect(onPublish).toHaveBeenCalled()
+    expect(screen.queryByText(/needs an aircraft/i)).not.toBeInTheDocument()
   })
 })
 

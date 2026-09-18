@@ -33,7 +33,7 @@ async def test_publish_moves_a_draft_to_published(client, admin_headers, admin_u
     mission = Mission(
         name="Ready",
         owner_id=str(admin_user.id),
-        waypoints=[{"lat": 1.0, "lng": 2.0}],
+        waypoints=[{"lat": 1.0, "lng": 2.0}, {"lat": 1.1, "lng": 2.1}],
         drone_id=str(drone.id),
     )
     await mission.insert()
@@ -177,3 +177,37 @@ async def test_delete_works_once_nobody_is_assigned(
 ):
     resp = await client.delete(f"/missions/{unassigned_mission.id}", headers=admin_headers)
     assert resp.status_code == 204
+
+
+async def test_publish_needs_more_than_one_waypoint(client, admin_headers, admin_user: User):
+    drone = Drone(name="Falcon 1", owner_id=str(admin_user.id))
+    await drone.insert()
+    mission = Mission(
+        name="One point",
+        owner_id=str(admin_user.id),
+        waypoints=[{"lat": 1.0, "lng": 2.0}],
+        drone_id=str(drone.id),
+    )
+    await mission.insert()
+
+    resp = await client.post(f"/missions/{mission.id}/publish", headers=admin_headers)
+
+    # a single point is a place, not a route
+    assert resp.status_code == 409
+    assert "two waypoints" in resp.json()["detail"]
+
+
+async def test_publish_is_happy_with_two(client, admin_headers, admin_user: User):
+    drone = Drone(name="Falcon 1", owner_id=str(admin_user.id))
+    await drone.insert()
+    mission = Mission(
+        name="A route",
+        owner_id=str(admin_user.id),
+        waypoints=[{"lat": 1.0, "lng": 2.0}, {"lat": 1.1, "lng": 2.1}],
+        drone_id=str(drone.id),
+    )
+    await mission.insert()
+
+    resp = await client.post(f"/missions/{mission.id}/publish", headers=admin_headers)
+
+    assert resp.status_code == 200

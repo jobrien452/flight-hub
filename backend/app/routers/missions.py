@@ -166,9 +166,11 @@ async def publish_mission(
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail="only a draft can be published"
         )
-    if not mission.waypoints:
+    # one point is a place, not a route, so there is nothing to fly between
+    if len(mission.waypoints) < 2:
         raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT, detail="a mission needs waypoints to publish"
+            status_code=status.HTTP_409_CONFLICT,
+            detail="a mission needs at least two waypoints to publish",
         )
     # a pilot cannot fly a plan that names no aircraft, so this is the gate.
     # saving is deliberately not gated, a draft may sit half finished as long as it likes

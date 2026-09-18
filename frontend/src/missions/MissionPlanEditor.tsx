@@ -103,6 +103,7 @@ export function MissionPlanEditor({
   const [overlay, setOverlay] = useState<ToolOverlay>({ markers: [] })
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
   const [drawerOpen, setDrawerOpen] = useState(false)
+  const [attempted, setAttempted] = useState<'save' | 'publish' | null>(null)
 
   // tools are built once and read these through the refs, so changing the
   // altitude doesn't rebuild them and wipe out what's already been placed
@@ -266,10 +267,15 @@ export function MissionPlanEditor({
   const selectedWaypoint = selectedIndex === null ? undefined : waypoints[selectedIndex]
   // a pilot cannot fly a plan that names no aircraft, so publishing waits for one.
   // saving is deliberately not gated, a draft may sit half finished
-  // a mission is referred to by name everywhere it turns up, so it needs one
-  // before it can be saved at all. the api refuses a blank one as well
-  const named = name.trim().length > 0
-  const readyToPublish = named && waypoints.length > 0 && droneId !== ''
+  // what is missing. nothing is shown until a save or a publish is attempted,
+  // so an empty editor is not covered in warnings before anything is typed
+  const missingName = name.trim().length === 0
+  const missingDrone = droneId === ''
+  // one point is a place, not a route. the publish route says the same
+  const shortRoute = waypoints.length < 2
+  const flagName = attempted !== null && missingName
+  const flagDrone = attempted === 'publish' && missingDrone
+  const flagRoute = attempted === 'publish' && shortRoute
   const payload = findPayload(payloadId)
   // with a sensor on board the spacing follows from the overlap, which is how a
   // survey is actually specified. without one there is nothing to compute from
@@ -302,14 +308,14 @@ export function MissionPlanEditor({
           <input
             value={name}
             placeholder="New Mission"
-            aria-invalid={!named}
-            aria-describedby={named ? undefined : 'mission-name-hint'}
-            className={named ? undefined : 'needs-attention'}
+            aria-invalid={flagName}
+            aria-describedby={flagName ? 'mission-name-hint' : undefined}
+            className={flagName ? 'needs-attention' : undefined}
             onChange={(e) => setName(e.target.value)}
           />
         </label>
         {/* outside the label, it describes the field rather than naming it */}
-        {!named && (
+        {flagName && (
           <p id="mission-name-hint" className="plan-editor-warning" role="alert">
             Every mission needs a name
           </p>
@@ -321,6 +327,9 @@ export function MissionPlanEditor({
           <select
             id="mission-aircraft"
             value={droneId}
+            aria-invalid={flagDrone}
+            aria-describedby={flagDrone ? 'mission-aircraft-hint' : undefined}
+            className={flagDrone ? 'needs-attention' : undefined}
             onChange={(e) => setDroneId(e.target.value)}
           >
             <option value="">No aircraft booked</option>
@@ -330,6 +339,12 @@ export function MissionPlanEditor({
               </option>
             ))}
           </select>
+
+          {flagDrone && (
+            <p id="mission-aircraft-hint" className="plan-editor-warning" role="alert">
+              Every mission needs an aircraft to fly it
+            </p>
+          )}
 
           <label htmlFor="mission-payload">Payload</label>
           <select
@@ -450,11 +465,20 @@ export function MissionPlanEditor({
         </fieldset>
 
         {error && <p className="auth-error">{error}</p>}
+        {flagRoute && (
+          <p className="plan-editor-warning" role="alert">
+            A route needs at least two waypoints
+          </p>
+        )}
         <button
           type="button"
           className="button"
-          disabled={!named || submitting}
-          onClick={() => onSubmit(currentValue())}
+          disabled={submitting}
+          onClick={() => {
+            setAttempted('save')
+            if (missingName) return
+            onSubmit(currentValue())
+          }}
         >
           {submitting ? 'Saving...' : submitLabel}
         </button>
@@ -462,8 +486,12 @@ export function MissionPlanEditor({
           <button
             type="button"
             className="button button-secondary"
-            disabled={!readyToPublish || publishing}
-            onClick={() => onPublish(currentValue())}
+            disabled={publishing}
+            onClick={() => {
+              setAttempted('publish')
+              if (missingName || missingDrone || shortRoute) return
+              onPublish(currentValue())
+            }}
           >
             {publishing ? 'Publishing...' : 'Publish'}
           </button>

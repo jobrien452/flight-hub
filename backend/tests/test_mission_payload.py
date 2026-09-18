@@ -49,7 +49,9 @@ async def test_a_mission_without_a_payload_is_fine(client, admin_headers):
 
 async def test_publishing_needs_an_aircraft(client, admin_headers, admin_user: User):
     mission = Mission(
-        name="Survey", owner_id=str(admin_user.id), waypoints=[{"lat": 1, "lng": 2, "alt": 30}]
+        name="Survey",
+        owner_id=str(admin_user.id),
+        waypoints=[{"lat": 1, "lng": 2, "alt": 30}, {"lat": 1.1, "lng": 2.1, "alt": 30}],
     )
     await mission.insert()
 
@@ -64,7 +66,7 @@ async def test_publishing_works_once_an_aircraft_is_booked(client, admin_headers
     mission = Mission(
         name="Survey",
         owner_id=str(admin_user.id),
-        waypoints=[{"lat": 1, "lng": 2, "alt": 30}],
+        waypoints=[{"lat": 1, "lng": 2, "alt": 30}, {"lat": 1.1, "lng": 2.1, "alt": 30}],
         drone_id=str(drone.id),
     )
     await mission.insert()
