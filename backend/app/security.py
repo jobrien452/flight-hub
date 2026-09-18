@@ -40,10 +40,24 @@ def api_token_prefix(token: str) -> str:
     return token[:API_TOKEN_DISPLAY_CHARS]
 
 
-def create_access_token(user_id: str, role: str) -> str:
+def stamp(moment: datetime | None) -> float:
+    # mongo hands datetimes back naive, and a naive .timestamp() would read as
+    # local time, so anything without a zone is treated as the utc it really is
+    if moment is None:
+        return 0.0
+    if moment.tzinfo is None:
+        moment = moment.replace(tzinfo=timezone.utc)
+    return moment.timestamp()
+
+
+def create_access_token(
+    user_id: str, role: str, password_changed_at: datetime | None = None
+) -> str:
     payload = {
         "sub": user_id,
         "role": role,
+        # what the password was when this was handed out, checked on every call
+        "pwd": stamp(password_changed_at),
         "exp": datetime.now(timezone.utc) + TOKEN_TTL,
     }
     return jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)
@@ -56,6 +70,7 @@ def decode_access_token(token: str) -> dict:
 
 __all__ = [
     "create_access_token",
+    "stamp",
     "decode_access_token",
     "hash_password",
     "verify_password",

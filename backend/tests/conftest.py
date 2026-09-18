@@ -107,3 +107,14 @@ async def unassigned_mission(admin_user: User) -> Mission:
     mission = Mission(name="Survey Site B", owner_id=str(admin_user.id))
     await mission.insert()
     return mission
+
+
+@pytest.fixture(autouse=True)
+def fresh_rate_limits():
+    # the limiters live for the life of the process, one test's attempts should
+    # not count against the next one's
+    from app.routers.auth import LIMITERS
+
+    for limiter in LIMITERS:
+        limiter.clear()
+    yield

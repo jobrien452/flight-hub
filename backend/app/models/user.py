@@ -17,6 +17,8 @@ class User(Document):
     role: Role
     # None until the invite is claimed, first login sets this
     password_hash: str | None = None
+    # tokens minted before this are no longer this user's to hold
+    password_changed_at: datetime | None = None
     invite_token: str | None = None
     invite_token_expires_at: datetime | None = None
     reset_token: str | None = None

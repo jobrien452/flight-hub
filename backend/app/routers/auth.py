@@ -1,10 +1,11 @@
 import logging
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Request, status
 
 from app.config import settings
 from app.email_client import send_password_reset_email
+from app.rate_limit import RateLimiter, caller, enforce
 from app.models.user import User
 from app.schemas.auth import (
     AcceptInviteRequest,
@@ -23,6 +24,16 @@ logger = logging.getLogger(__name__)
 # question "is this person a user here" to anyone with a stopwatch
 _TIMING_EQUALISER = hash_password("no user by that name")
 
+# guessing is the attack these routes face, so the allowance is small. per
+# address, and per email as well on login so one account cannot be worked on
+# from a handful of machines
+LOGINS_PER_CALLER = RateLimiter(limit=10, window_seconds=300)
+LOGINS_PER_EMAIL = RateLimiter(limit=5, window_seconds=300)
+RESETS_PER_CALLER = RateLimiter(limit=5, window_seconds=900)
+TOKEN_TRIES_PER_CALLER = RateLimiter(limit=10, window_seconds=300)
+
+LIMITERS = (LOGINS_PER_CALLER, LOGINS_PER_EMAIL, RESETS_PER_CALLER, TOKEN_TRIES_PER_CALLER)
+
 
 def _is_expired(expires_at: datetime | None) -> bool:
     # mongo round-trips datetimes as naive UTC, so compare on equal footing
@@ -35,12 +46,19 @@ def _is_expired(expires_at: datetime | None) -> bool:
 
 
 def _login_response(user: User) -> LoginResponse:
-    token = create_access_token(user_id=str(user.id), role=user.role.value)
+    token = create_access_token(
+        user_id=str(user.id),
+        role=user.role.value,
+        password_changed_at=user.password_changed_at,
+    )
     return LoginResponse(token=token, user_id=str(user.id), name=user.name, role=user.role)
 
 
 @router.post("/login", response_model=LoginResponse)
-async def login(payload: LoginRequest) -> LoginResponse:
+async def login(request: Request, payload: LoginRequest) -> LoginResponse:
+    enforce(LOGINS_PER_CALLER, caller(request), retry_after=300)
+    enforce(LOGINS_PER_EMAIL, payload.email.lower(), retry_after=300)
+
     user = await User.find_one(User.email == payload.email)
     # same generic error whether the email is unknown, unclaimed, or the password's wrong
     if user is None or user.password_hash is None:
@@ -52,7 +70,9 @@ async def login(payload: LoginRequest) -> LoginResponse:
 
 
 @router.post("/accept-invite", response_model=LoginResponse)
-async def accept_invite(payload: AcceptInviteRequest) -> LoginResponse:
+async def accept_invite(request: Request, payload: AcceptInviteRequest) -> LoginResponse:
+    enforce(TOKEN_TRIES_PER_CALLER, caller(request), retry_after=300)
+
     user = await User.find_one(User.invite_token == payload.token)
     if user is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
@@ -60,6 +80,7 @@ async def accept_invite(payload: AcceptInviteRequest) -> LoginResponse:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="invite expired")
 
     user.password_hash = hash_password(payload.password)
+    user.password_changed_at = datetime.now(timezone.utc)
     user.invite_token = None
     user.invite_token_expires_at = None
     await user.save()
@@ -67,7 +88,11 @@ async def accept_invite(payload: AcceptInviteRequest) -> LoginResponse:
 
 
 @router.post("/request-password-reset", status_code=status.HTTP_200_OK)
-async def request_password_reset(payload: RequestPasswordResetRequest) -> dict[str, str]:
+async def request_password_reset(
+    request: Request, payload: RequestPasswordResetRequest
+) -> dict[str, str]:
+    enforce(RESETS_PER_CALLER, caller(request), retry_after=900)
+
     user = await User.find_one(User.email == payload.email)
     if user is not None:
         user.reset_token = generate_token()
@@ -85,7 +110,9 @@ async def request_password_reset(payload: RequestPasswordResetRequest) -> dict[s
 
 
 @router.post("/reset-password", status_code=status.HTTP_200_OK)
-async def reset_password(payload: ResetPasswordRequest) -> dict[str, str]:
+async def reset_password(request: Request, payload: ResetPasswordRequest) -> dict[str, str]:
+    enforce(TOKEN_TRIES_PER_CALLER, caller(request), retry_after=300)
+
     user = await User.find_one(User.reset_token == payload.token)
     if user is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
@@ -93,6 +120,8 @@ async def reset_password(payload: ResetPasswordRequest) -> dict[str, str]:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="reset link expired")
 
     user.password_hash = hash_password(payload.password)
+    # every session opened before now belongs to whoever knew the old password
+    user.password_changed_at = datetime.now(timezone.utc)
     user.reset_token = None
     user.reset_token_expires_at = None
     await user.save()

@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 
 from beanie import PydanticObjectId
 from fastapi import APIRouter, Depends, HTTPException, status
+from pymongo.errors import DuplicateKeyError
 
 from app.ids import to_object_id
 from app.deps import CurrentUser, get_current_user
@@ -92,12 +93,32 @@ async def create_report(
     if current_user.role != Role.PILOT:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
     await get_owned_mission(mission_id, current_user)  # 404 unless this pilot is on it
+
+    # one report per pilot per mission. the index enforces it, this says so in
+    # a way the caller can act on rather than as a write that blows up
+    existing = await MissionReport.find_one(
+        MissionReport.mission_id == mission_id,
+        MissionReport.pilot_id == current_user.user_id,
+    )
+    if existing is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="you have already filed a report for this mission, edit that one",
+        )
+
     report = MissionReport(
         mission_id=mission_id, pilot_id=current_user.user_id, **payload.model_dump()
     )
     if report.status == MissionReportStatus.SUBMITTED:
         report.submitted_at = report.updated_at
-    await report.insert()
+    try:
+        await report.insert()
+    except DuplicateKeyError:
+        # two requests raced past the check above, the index caught the loser
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="you have already filed a report for this mission, edit that one",
+        )
 
     # a pilot can file and submit in one go, that still finishes the mission
     if report.status == MissionReportStatus.SUBMITTED:

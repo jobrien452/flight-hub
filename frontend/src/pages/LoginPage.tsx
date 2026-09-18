@@ -5,6 +5,15 @@ import { ApiError } from '../api/client'
 import { useAuth } from '../auth/useAuth'
 import './AuthPage.css'
 
+// the server shuts the door after a run of failed attempts, which is worth
+// saying plainly rather than reading as another wrong password
+function loginError(err: unknown): string {
+  if (!(err instanceof ApiError)) return 'Something went wrong, try again'
+  if (err.status === 429) return 'Too many attempts, wait a few minutes and try again'
+  if (err.status === 401) return 'Incorrect email or password'
+  return 'Something went wrong, try again'
+}
+
 export function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -22,11 +31,7 @@ export function LoginPage() {
       setSession(session)
       navigate('/missions', { replace: true })
     } catch (err) {
-      setError(
-        err instanceof ApiError && err.status === 401
-          ? 'Incorrect email or password'
-          : 'Something went wrong, try again',
-      )
+      setError(loginError(err))
     } finally {
       setSubmitting(false)
     }

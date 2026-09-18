@@ -3,9 +3,10 @@ from datetime import datetime, timezone
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
+from app.ids import to_object_id
 from app.models.api_token import ApiToken
 from app.models.user import Role, User
-from app.security import API_TOKEN_PREFIX, JWTError, decode_access_token, hash_api_token
+from app.security import API_TOKEN_PREFIX, JWTError, decode_access_token, hash_api_token, stamp
 
 bearer_scheme = HTTPBearer()
 
@@ -44,7 +45,19 @@ async def get_current_user(
         payload = decode_access_token(raw_token)
     except JWTError:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token")
-    return CurrentUser(user_id=payload["sub"], role=Role(payload["role"]))
+
+    user = await User.get(to_object_id(payload.get("sub")))
+    if user is None:
+        # deleted since this was handed out, so it is not a session any more
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid token")
+
+    # a password change ends every session that predates it, which is what makes
+    # a reset actually lock out whoever had the old one
+    if stamp(user.password_changed_at) > payload.get("pwd", 0):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="session ended")
+
+    # the role comes off the account rather than the token, so a change lands now
+    return CurrentUser(user_id=str(user.id), role=user.role)
 
 
 async def require_admin(current_user: CurrentUser = Depends(get_current_user)) -> CurrentUser:

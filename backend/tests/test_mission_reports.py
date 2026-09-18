@@ -122,3 +122,18 @@ async def test_no_delete_route_exists(client, pilot_headers, flyable_mission: Mi
         f"/missions/{flyable_mission.id}/reports/{report_id}", headers=pilot_headers
     )
     assert resp.status_code == 405
+
+
+async def test_a_pilot_cannot_file_two_reports_for_one_mission(
+    client, pilot_headers, flyable_mission: Mission
+):
+    first = await client.post(
+        f"/missions/{flyable_mission.id}/reports", json={"notes": "one"}, headers=pilot_headers
+    )
+    assert first.status_code == 201
+
+    second = await client.post(
+        f"/missions/{flyable_mission.id}/reports", json={"notes": "two"}, headers=pilot_headers
+    )
+
+    assert second.status_code == 409
