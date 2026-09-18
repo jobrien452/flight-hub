@@ -21,6 +21,7 @@ function renderPage(session: Record<string, string>) {
         <Routes>
           <Route path="/missions" element={<MissionsPage />} />
           <Route path="/missions/:id" element={<h1>Mission detail</h1>} />
+          <Route path="/missions/:id/plan" element={<h1>Mission planning</h1>} />
         </Routes>
       </AuthProvider>
     </MemoryRouter>,
@@ -113,20 +114,37 @@ describe('MissionsPage row menu', () => {
 
     const menu = screen.getByRole('menu')
     expect(within(menu).queryByRole('menuitem', { name: 'Publish' })).not.toBeInTheDocument()
-    expect(within(menu).getByRole('menuitem', { name: 'Plan' })).toHaveAttribute(
-      'href',
-      `/missions/${fixtureMission.id}/plan`,
-    )
+    expect(within(menu).getByRole('menuitem', { name: 'Plan' })).toBeInTheDocument()
   })
 
-  it('points view at the mission', async () => {
+  it('goes to the planning page from the menu', async () => {
+    serveMissions({ status: 'published' })
     renderPage(adminSession)
     await openMenu()
 
-    expect(within(screen.getByRole('menu')).getByRole('menuitem', { name: 'View' })).toHaveAttribute(
-      'href',
-      `/missions/${fixtureMission.id}`,
-    )
+    await userEvent.click(within(screen.getByRole('menu')).getByRole('menuitem', { name: 'Plan' }))
+
+    expect(await screen.findByRole('heading', { name: 'Mission planning' })).toBeInTheDocument()
+  })
+
+  it('opens the mission from the menu', async () => {
+    renderPage(adminSession)
+    await openMenu()
+
+    await userEvent.click(within(screen.getByRole('menu')).getByRole('menuitem', { name: 'View' }))
+
+    expect(await screen.findByRole('heading', { name: 'Mission detail' })).toBeInTheDocument()
+  })
+
+  it('builds every item in the menu the same way, so none of them can drift', async () => {
+    serveMissions({ status: 'published' })
+    renderPage(adminSession)
+    await openMenu()
+
+    const items = within(screen.getByRole('menu')).getAllByRole('menuitem')
+
+    expect(items.map((el) => el.textContent)).toEqual(['View', 'Edit', 'Plan', 'Delete'])
+    expect(items.map((el) => el.tagName)).toEqual(['BUTTON', 'BUTTON', 'BUTTON', 'BUTTON'])
   })
 
   it('publishes from the menu and offers the assignment page', async () => {

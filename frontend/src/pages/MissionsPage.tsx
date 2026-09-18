@@ -22,6 +22,16 @@ function RowMenu({
 }) {
   const [open, setOpen] = useState(false)
   const wrapper = useRef<HTMLDivElement>(null)
+  const navigate = useNavigate()
+
+  // every item is a button that shuts the menu and then does its thing, so none
+  // of them can drift from the others
+  function choose(action: () => void) {
+    return () => {
+      setOpen(false)
+      action()
+    }
+  }
 
   useEffect(() => {
     if (!open) return
@@ -53,45 +63,36 @@ function RowMenu({
       </button>
       {open && (
         <div className="row-menu-items" role="menu">
-          <Link role="menuitem" to={`/missions/${mission.id}`}>
-            View
-          </Link>
           <button
             type="button"
             role="menuitem"
-            onClick={() => {
-              setOpen(false)
-              onEdit()
-            }}
+            onClick={choose(() => navigate(`/missions/${mission.id}`))}
           >
+            View
+          </button>
+          <button type="button" role="menuitem" onClick={choose(onEdit)}>
             Edit
           </button>
           {mission.status === 'draft' && (
-            <button
-              type="button"
-              role="menuitem"
-              onClick={() => {
-                setOpen(false)
-                onPublish()
-              }}
-            >
+            <button type="button" role="menuitem" onClick={choose(onPublish)}>
               Publish
             </button>
           )}
           {/* there is nothing to plan against until the mission is published */}
           {mission.status !== 'draft' && (
-            <Link role="menuitem" to={`/missions/${mission.id}/plan`}>
+            <button
+              type="button"
+              role="menuitem"
+              onClick={choose(() => navigate(`/missions/${mission.id}/plan`))}
+            >
               Plan
-            </Link>
+            </button>
           )}
           <button
             type="button"
             role="menuitem"
             className="row-menu-danger"
-            onClick={() => {
-              setOpen(false)
-              onDelete()
-            }}
+            onClick={choose(onDelete)}
           >
             Delete
           </button>

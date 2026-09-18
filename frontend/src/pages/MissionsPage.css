@@ -57,9 +57,9 @@
   background: none;
   border: 1px solid transparent;
   border-radius: 3px;
-  padding: 2px 8px;
+  padding: 6px 8px;
   font-size: 16px;
-  line-height: 1.2;
+  line-height: 1;
   color: var(--text-dim);
   cursor: pointer;
 }
@@ -84,26 +84,29 @@
   border-radius: 4px;
 }
 
-.row-menu-items a,
 .row-menu-items button {
+  appearance: none;
+  display: block;
+  width: 100%;
+  margin: 0;
   background: none;
   border: none;
   border-radius: 3px;
   padding: 6px 8px;
+  font: inherit;
   font-size: 12px;
+  line-height: 18px;
   text-align: left;
-  text-decoration: none;
   color: var(--text);
   cursor: pointer;
 }
 
-.row-menu-items a:hover,
 .row-menu-items button:hover {
   background: var(--panel);
 }
 
-.row-menu-danger {
-  color: var(--danger) !important;
+.row-menu-items .row-menu-danger {
+  color: var(--danger);
 }
 
 /* the edit/remove buttons that sit at the end of a table row */
@@ -119,7 +122,7 @@
   background: none;
   border: 1px solid var(--border);
   border-radius: 3px;
-  padding: 3px 8px;
+  padding: 6px 8px;
   margin-left: 6px;
   cursor: pointer;
 }
