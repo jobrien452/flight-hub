@@ -1,6 +1,6 @@
 import { apiFetch } from './client'
 import type { Role } from '../types/auth'
-import type { User } from '../types/user'
+import type { User, UserCreateInput } from '../types/user'
 
 export async function listUsers(token: string, role?: Role): Promise<User[]> {
   const query = role ? `?role=${role}` : ''
@@ -9,4 +9,11 @@ export async function listUsers(token: string, role?: Role): Promise<User[]> {
 
 export async function getMe(token: string): Promise<User> {
   return apiFetch<User>('/users/me', token)
+}
+
+export async function createUser(payload: UserCreateInput, token: string): Promise<User> {
+  return apiFetch<User>('/users', token, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
 }

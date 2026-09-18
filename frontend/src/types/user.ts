@@ -7,3 +7,11 @@ export interface User {
   role: Role
   has_password: boolean
 }
+
+export interface UserCreateInput {
+  name: string
+  email: string
+  role: Role
+  // left off, the account gets an invite link to pick its own
+  password?: string
+}

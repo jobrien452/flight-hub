@@ -137,6 +137,14 @@ export const handlers = [
     }),
   ),
 
+  http.post(`${API_URL}/users`, async ({ request }) => {
+    const body = (await request.json()) as Partial<User>
+    return HttpResponse.json(
+      { id: 'user-new', has_password: false, ...body },
+      { status: 201 },
+    )
+  }),
+
   http.get(`${API_URL}/users`, ({ request }) => {
     const role = new URL(request.url).searchParams.get('role')
     const users = role ? fixtureUsers.filter((u) => u.role === role) : fixtureUsers

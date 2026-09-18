@@ -1,0 +1,4 @@
+.users-table td.mono {
+  color: var(--text-dim);
+  white-space: nowrap;
+}

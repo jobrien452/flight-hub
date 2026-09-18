@@ -26,6 +26,11 @@ export function AppLayout() {
             </GuardedNavLink>
           )}
           {session?.role === 'admin' && (
+            <GuardedNavLink to="/users" className={({ isActive }) => (isActive ? 'active' : '')}>
+              Users
+            </GuardedNavLink>
+          )}
+          {session?.role === 'admin' && (
             <GuardedNavLink to="/api-docs" className={({ isActive }) => (isActive ? 'active' : '')}>
               API
             </GuardedNavLink>

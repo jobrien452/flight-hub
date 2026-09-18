@@ -210,7 +210,7 @@ export function FleetPage() {
           busy={working}
           error={actionError}
           body={
-            <div className="fleet-form">
+            <div className="dialog-form">
               <label>
                 Name
                 <input value={name} onChange={(e) => setName(e.target.value)} />
@@ -254,7 +254,7 @@ export function FleetPage() {
           busy={working}
           error={actionError}
           body={
-            <div className="fleet-form">
+            <div className="dialog-form">
               <label>
                 Name
                 <input value={editName} onChange={(e) => setEditName(e.target.value)} />

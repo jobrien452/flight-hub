@@ -15,6 +15,7 @@ import { NewMissionPage } from './pages/NewMissionPage'
 import { ProfilePage } from './pages/ProfilePage'
 import { RequestPasswordResetPage } from './pages/RequestPasswordResetPage'
 import { ResetPasswordPage } from './pages/ResetPasswordPage'
+import { UsersPage } from './pages/UsersPage'
 
 // swagger-ui is a couple of megabytes and only an admin on one page ever needs
 // it, so it stays out of the main bundle
@@ -40,6 +41,7 @@ function App() {
               <Route path="/missions/:id/plan" element={<MissionPlanPage />} />
               <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/fleet" element={<FleetPage />} />
+              <Route path="/users" element={<UsersPage />} />
               <Route path="/profile" element={<ProfilePage />} />
               <Route
                 path="/api-docs"

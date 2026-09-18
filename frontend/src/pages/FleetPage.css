@@ -24,47 +24,6 @@
   border-color: var(--danger);
 }
 
-.fleet-form {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.fleet-form label {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--text-dim);
-}
-
-.fleet-form input {
-  font: inherit;
-  color: var(--text);
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 3px;
-  padding: 6px 8px;
-}
-
-.fleet-form select {
-  font: inherit;
-  color: var(--text);
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 3px;
-  padding: 6px 8px;
-}
-
-.fleet-form p {
-  margin: 0;
-  font-size: 12px;
-  text-transform: none;
-  letter-spacing: 0;
-}
-
 .fleet-toggle {
   display: flex;
   align-items: center;
