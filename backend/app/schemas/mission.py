@@ -1,14 +1,19 @@
 from datetime import datetime
+from typing import Annotated
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, StringConstraints
 
 from app.models.mission import Mission, MissionStatus, Payload, PlanParams, Waypoint
+
+# a mission is referred to by name everywhere it appears, in a pilot's queue and
+# in the mail they get, so an unnamed one is not a thing worth having
+MissionName = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
 
 
 class MissionCreate(BaseModel):
     # no status here, everything starts as a draft and moves on through the
     # publish route and pilot reports, never by the client naming a state
-    name: str
+    name: MissionName
     assigned_pilot_ids: list[str] = Field(default_factory=list)
     drone_id: str | None = None
     payload: Payload | None = None
@@ -18,7 +23,8 @@ class MissionCreate(BaseModel):
 
 class MissionUpdate(BaseModel):
     # all optional, only sent fields get applied
-    name: str | None = None
+    # sending it is optional, sending an empty one is not
+    name: MissionName | None = None
     assigned_pilot_ids: list[str] | None = None
     drone_id: str | None = None
     payload: Payload | None = None

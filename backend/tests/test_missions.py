@@ -91,3 +91,38 @@ async def test_admin_can_delete_mission(client, admin_headers, unassigned_missio
 async def test_pilot_cannot_delete_mission(client, pilot_headers, assigned_mission: Mission):
     resp = await client.delete(f"/missions/{assigned_mission.id}", headers=pilot_headers)
     assert resp.status_code == 403
+
+
+async def test_a_mission_cannot_be_created_without_a_name(client, admin_headers):
+    resp = await client.post("/missions", json={"name": ""}, headers=admin_headers)
+
+    assert resp.status_code == 422
+
+
+async def test_whitespace_is_not_a_name(client, admin_headers):
+    resp = await client.post("/missions", json={"name": "   "}, headers=admin_headers)
+
+    assert resp.status_code == 422
+
+
+async def test_a_name_is_stored_without_the_padding_around_it(client, admin_headers):
+    resp = await client.post("/missions", json={"name": "  Survey Site A  "}, headers=admin_headers)
+
+    assert resp.status_code == 201
+    assert resp.json()["name"] == "Survey Site A"
+
+
+async def test_a_mission_cannot_be_renamed_to_nothing(client, admin_headers, assigned_mission):
+    resp = await client.patch(
+        f"/missions/{assigned_mission.id}", json={"name": "  "}, headers=admin_headers
+    )
+
+    assert resp.status_code == 422
+
+
+async def test_a_rename_that_is_left_out_is_still_fine(client, admin_headers, assigned_mission):
+    resp = await client.patch(
+        f"/missions/{assigned_mission.id}", json={"waypoints": []}, headers=admin_headers
+    )
+
+    assert resp.status_code == 200

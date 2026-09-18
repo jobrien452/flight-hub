@@ -247,3 +247,8 @@
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
+
+.plan-editor-hint {
+  margin: 0;
+  font-size: 11px;
+}

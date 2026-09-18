@@ -61,6 +61,10 @@ Local Deployment
 
 ```docker compose up --build -d```
 
+Locally web is accessible at localhost and api at localhost:8000 or localhost/api
+
+Https is only available if you have the system publicly exposed
+
 For more granular controls of the system check the .env file for the backend
 
 Frontend env file only contains the api url and need much less configuration

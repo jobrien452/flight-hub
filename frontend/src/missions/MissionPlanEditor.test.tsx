@@ -95,6 +95,13 @@ async function placeBox() {
   }
 }
 
+// the editor will not submit a nameless mission, so name it on the way past
+async function save(label = 'Create') {
+  const nameField = screen.getByPlaceholderText('New Mission') as HTMLInputElement
+  if (nameField.value === '') await userEvent.type(nameField, 'Test Mission')
+  await userEvent.click(screen.getByRole('button', { name: label }))
+}
+
 // select is the tool on load, so placing anything means picking a tool first
 async function activateWaypointTool() {
   await userEvent.click(screen.getByRole('button', { name: 'Waypoint' }))
@@ -205,7 +212,7 @@ describe('MissionPlanEditor', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Waypoint' }))
     await userEvent.click(screen.getByText('click A'))
-    await userEvent.click(screen.getByRole('button', { name: 'Create' }))
+    await save()
 
     expect(onSubmit.mock.calls[0][0].waypoints).toHaveLength(before + 1)
   })
@@ -224,7 +231,7 @@ describe('MissionPlanEditor', () => {
     await userEvent.type(screen.getByLabelText('Name'), 'Test Mission')
     await activateWaypointTool()
     await userEvent.click(screen.getByText('click A'))
-    await userEvent.click(screen.getByRole('button', { name: 'Create' }))
+    await save()
 
     expect(onSubmit).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -237,7 +244,7 @@ describe('MissionPlanEditor', () => {
 
   it('carries the assigned pilots through untouched when editing a mission', async () => {
     const onSubmit = renderEditor(vi.fn(), fixtureMission)
-    await userEvent.click(screen.getByRole('button', { name: 'Create' }))
+    await save()
 
     expect(onSubmit).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -263,7 +270,7 @@ describe('MissionPlanEditor waypoint altitude', () => {
     await userEvent.click(screen.getByText('click A'))
     await setAltitude('120')
     await userEvent.click(screen.getByText('click B'))
-    await userEvent.click(screen.getByRole('button', { name: 'Create' }))
+    await save()
 
     expect(onSubmit.mock.calls[0][0].waypoints).toEqual([
       { lat: 20, lng: 10, alt: 50 },
@@ -304,7 +311,7 @@ describe('MissionPlanEditor select tool', () => {
     const input = screen.getByLabelText('Waypoint altitude (m)')
     await userEvent.clear(input)
     await userEvent.type(input, '75')
-    await userEvent.click(screen.getByRole('button', { name: 'Create' }))
+    await save()
 
     expect(onSubmit.mock.calls[0][0].waypoints).toEqual([
       { lat: 20, lng: 10, alt: 75 },
@@ -316,7 +323,7 @@ describe('MissionPlanEditor select tool', () => {
     const onSubmit = renderEditor()
     await placeTwoAndSelect('grab second')
     await userEvent.click(screen.getByText('drag to 99/88'))
-    await userEvent.click(screen.getByRole('button', { name: 'Create' }))
+    await save()
 
     expect(onSubmit.mock.calls[0][0].waypoints).toEqual([
       { lat: 20, lng: 10, alt: 50 },
@@ -328,7 +335,7 @@ describe('MissionPlanEditor select tool', () => {
     const onSubmit = renderEditor()
     await placeTwoAndSelect('grab first')
     await userEvent.click(screen.getByRole('button', { name: 'Delete waypoint' }))
-    await userEvent.click(screen.getByRole('button', { name: 'Create' }))
+    await save()
 
     expect(onSubmit.mock.calls[0][0].waypoints).toEqual([{ lat: 20, lng: 10.002, alt: 120 }])
   })
@@ -358,7 +365,7 @@ describe('MissionPlanEditor select tool', () => {
     const drawer = screen.getByRole('complementary', { name: 'Waypoint 2 details' })
     await userEvent.type(within(drawer).getByLabelText('Heading (deg)'), '90')
     await userEvent.type(within(drawer).getByLabelText('Speed (m/s)'), '4')
-    await userEvent.click(screen.getByRole('button', { name: 'Create' }))
+    await save()
 
     expect(onSubmit.mock.calls[0][0].waypoints[1]).toMatchObject({ heading: 90, speed: 4 })
   })
@@ -372,7 +379,7 @@ describe('MissionPlanEditor select tool', () => {
     await userEvent.type(within(drawer).getByLabelText('Gimbal pitch (deg)'), '-90')
     await userEvent.type(within(drawer).getByLabelText('Zoom (x)'), '4')
     await userEvent.click(within(drawer).getByLabelText('Take a photo here'))
-    await userEvent.click(screen.getByRole('button', { name: 'Create' }))
+    await save()
 
     expect(onSubmit.mock.calls[0][0].waypoints[1]).toMatchObject({
       gimbal_pitch: -90,
@@ -384,7 +391,7 @@ describe('MissionPlanEditor select tool', () => {
   it('asks the payload for nothing until it is told to', async () => {
     const onSubmit = renderEditor()
     await placeTwoAndSelect('grab second')
-    await userEvent.click(screen.getByRole('button', { name: 'Create' }))
+    await save()
 
     expect(onSubmit.mock.calls[0][0].waypoints[1].photo).toBeFalsy()
   })
@@ -538,7 +545,7 @@ describe('corridor tool', () => {
     await userEvent.click(screen.getByRole('button', { name: 'click A' }))
     await userEvent.click(screen.getByRole('button', { name: 'click B' }))
     await userEvent.click(screen.getByRole('button', { name: 'Generate Corridor' }))
-    await userEvent.click(screen.getByRole('button', { name: 'Create Mission' }))
+    await save('Create Mission')
 
     const value = onSubmit.mock.calls.at(-1)?.[0]
     expect(value.planParams.type).toBe('corridor')
@@ -612,7 +619,7 @@ describe('drafts do not eat the plan', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Corridor' }))
     await userEvent.click(screen.getByText('click B'))
     await userEvent.click(screen.getByText('click C'))
-    await userEvent.click(screen.getByRole('button', { name: 'Create' }))
+    await save()
 
     // the traced line is a draft, it does not become the plan until you generate
     expect(onSubmit.mock.calls[0][0].waypoints).toEqual([{ lat: 20, lng: 10, alt: 50 }])
@@ -638,7 +645,7 @@ describe('drafts do not eat the plan', () => {
     await userEvent.click(screen.getByText('click A'))
 
     await placeBox()
-    await userEvent.click(screen.getByRole('button', { name: 'Create' }))
+    await save()
 
     expect(onSubmit.mock.calls[0][0].waypoints).toEqual([{ lat: 20, lng: 10, alt: 50 }])
   })
@@ -845,7 +852,7 @@ describe('aircraft and payload', () => {
     const onSubmit = renderEditor()
 
     await userEvent.selectOptions(await screen.findByLabelText(/aircraft/i), 'drone-free')
-    await userEvent.click(screen.getByRole('button', { name: 'Create' }))
+    await save()
 
     expect(onSubmit.mock.calls[0][0].droneId).toBe('drone-free')
   })
@@ -864,7 +871,7 @@ describe('aircraft and payload', () => {
     const onSubmit = renderEditor()
 
     await userEvent.selectOptions(await screen.findByLabelText(/payload/i), 'sony-ilx-lr1-24')
-    await userEvent.click(screen.getByRole('button', { name: 'Create' }))
+    await save()
 
     expect(onSubmit.mock.calls[0][0].payload).toMatchObject({
       camera: 'Sony ILX-LR1',
@@ -896,7 +903,7 @@ describe('publishing needs an aircraft', () => {
   it('still lets the mission be saved with no aircraft', async () => {
     const onSubmit = renderEditor(vi.fn(), { ...fixtureMission, status: 'draft', drone_id: null })
 
-    await userEvent.click(screen.getByRole('button', { name: 'Create' }))
+    await save()
 
     expect(onSubmit).toHaveBeenCalled()
   })
@@ -1052,5 +1059,45 @@ describe('MissionPlanEditor unsaved work', () => {
     await leave()
 
     expect(screen.getByRole('dialog')).toBeInTheDocument()
+  })
+})
+
+describe('MissionPlanEditor naming', () => {
+  it('will not save a mission that has no name', async () => {
+    renderEditor()
+
+    expect(screen.getByRole('button', { name: 'Create' })).toBeDisabled()
+  })
+
+  it('will not take whitespace as a name either', async () => {
+    renderEditor()
+
+    await userEvent.type(screen.getByPlaceholderText('New Mission'), '   ')
+
+    expect(screen.getByRole('button', { name: 'Create' })).toBeDisabled()
+  })
+
+  it('saves once it has been given one', async () => {
+    const onSubmit = renderEditor()
+
+    await userEvent.type(screen.getByPlaceholderText('New Mission'), 'Survey Site A')
+    await userEvent.click(screen.getByRole('button', { name: 'Create' }))
+
+    expect(onSubmit.mock.calls[0][0].name).toBe('Survey Site A')
+  })
+
+  it('trims the name on the way out', async () => {
+    const onSubmit = renderEditor()
+
+    await userEvent.type(screen.getByPlaceholderText('New Mission'), '  Survey Site A  ')
+    await userEvent.click(screen.getByRole('button', { name: 'Create' }))
+
+    expect(onSubmit.mock.calls[0][0].name).toBe('Survey Site A')
+  })
+
+  it('says why the save is not available', async () => {
+    renderEditor()
+
+    expect(screen.getByText(/needs a name/i)).toBeInTheDocument()
   })
 })

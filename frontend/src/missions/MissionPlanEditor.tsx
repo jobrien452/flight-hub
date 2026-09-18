@@ -248,7 +248,7 @@ export function MissionPlanEditor({
 
   function currentValue(): MissionPlanEditorValue {
     return {
-      name,
+      name: name.trim(),
       assignedPilotIds,
       droneId: droneId || null,
       payload: findPayload(payloadId) ?? null,
@@ -266,7 +266,10 @@ export function MissionPlanEditor({
   const selectedWaypoint = selectedIndex === null ? undefined : waypoints[selectedIndex]
   // a pilot cannot fly a plan that names no aircraft, so publishing waits for one.
   // saving is deliberately not gated, a draft may sit half finished
-  const readyToPublish = name.trim().length > 0 && waypoints.length > 0 && droneId !== ''
+  // a mission is referred to by name everywhere it turns up, so it needs one
+  // before it can be saved at all. the api refuses a blank one as well
+  const named = name.trim().length > 0
+  const readyToPublish = named && waypoints.length > 0 && droneId !== ''
   const payload = findPayload(payloadId)
   // with a sensor on board the spacing follows from the overlap, which is how a
   // survey is actually specified. without one there is nothing to compute from
@@ -438,10 +441,11 @@ export function MissionPlanEditor({
         </fieldset>
 
         {error && <p className="auth-error">{error}</p>}
+        {!named && <p className="text-dim plan-editor-hint">Every mission needs a name.</p>}
         <button
           type="button"
           className="button"
-          disabled={submitting}
+          disabled={!named || submitting}
           onClick={() => onSubmit(currentValue())}
         >
           {submitting ? 'Saving...' : submitLabel}
