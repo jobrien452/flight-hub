@@ -20,7 +20,9 @@ def _out(drone: Drone, booked_on: str | None = None) -> DroneOut:
 @router.get("", response_model=list[DroneOut])
 async def list_drones(current_user: CurrentUser = Depends(get_current_user)) -> list[DroneOut]:
     if current_user.role == Role.ADMIN:
-        drones = await Drone.find(Drone.owner_id == current_user.user_id).to_list()
+        drones = await Drone.find(
+            Drone.owner_id == current_user.user_id, Drone.hidden == False  # noqa: E712
+        ).to_list()
         booked = await bookings_by_drone(current_user.user_id)
         return [_out(d, booked.get(str(d.id))) for d in drones]
 
@@ -64,6 +66,11 @@ async def update_drone(
     return _out(drone)
 
 
+# a mission that has not been flown yet can give its aircraft up, one that has
+# keeps it, which is what decides whether the drone can really go
+UNFLOWN = {MissionStatus.DRAFT, MissionStatus.PUBLISHED}
+
+
 @router.delete("/{drone_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_drone(
     drone_id: str, current_user: CurrentUser = Depends(require_admin)
@@ -74,4 +81,30 @@ async def delete_drone(
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT, detail="this drone is out on a mission"
         )
+
+    booked = await Mission.find(
+        Mission.owner_id == current_user.user_id, Mission.drone_id == drone_id
+    ).to_list()
+
+    flown = False
+    for mission in booked:
+        if mission.status not in UNFLOWN:
+            # it already flew this one, the booking is history and stays put
+            flown = True
+            continue
+        mission.drone_id = None
+        # nothing flies without an aircraft, so a plan that had one goes back to
+        # the drawing board rather than sitting published and unflyable
+        mission.status = MissionStatus.DRAFT
+        mission.updated_at = datetime.now(timezone.utc)
+        await mission.save()
+
+    if flown or drone.missions_flown or drone.flight_hours:
+        # kept out of sight so its hours and the missions it flew still add up
+        drone.status = DroneStatus.RETIRED
+        drone.hidden = True
+        drone.updated_at = datetime.now(timezone.utc)
+        await drone.save()
+        return
+
     await drone.delete()

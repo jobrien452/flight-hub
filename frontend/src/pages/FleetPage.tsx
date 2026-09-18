@@ -9,6 +9,18 @@ import './MissionsPage.css'
 
 const STATUSES: DroneStatus[] = ['available', 'in_flight', 'maintenance', 'retired']
 
+// what removing this one really means, which depends on whether it has flown
+function removalWarning(drone: Drone): string {
+  const flown = drone.missions_flown > 0 || drone.flight_hours > 0
+  const history = flown
+    ? `${drone.name} has ${drone.missions_flown} missions and ${drone.flight_hours} hours on it, so it is marked retired and hidden rather than deleted. The missions it flew keep their aircraft.`
+    : `${drone.name} has never flown, so it is removed permanently.`
+  const booking = drone.booked_on
+    ? ' The mission holding it loses its aircraft and goes back to draft.'
+    : ''
+  return history + booking
+}
+
 export function FleetPage() {
   const { session } = useAuth()
   const [drones, setDrones] = useState<Drone[] | null>(null)
@@ -18,6 +30,9 @@ export function FleetPage() {
   const [model, setModel] = useState('')
   const [serial, setSerial] = useState('')
   const [streamUrl, setStreamUrl] = useState('')
+  const [editing, setEditing] = useState<Drone | null>(null)
+  const [editName, setEditName] = useState('')
+  const [editStatus, setEditStatus] = useState<DroneStatus>('available')
   const [removing, setRemoving] = useState<Drone | null>(null)
   const [working, setWorking] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
@@ -58,14 +73,29 @@ export function FleetPage() {
     }
   }
 
-  async function handleStatus(drone: Drone, status: DroneStatus) {
-    if (!session) return
+  function openEdit(drone: Drone) {
+    setEditing(drone)
+    setEditName(drone.name)
+    setEditStatus(drone.status)
+    setActionError(null)
+  }
+
+  async function handleEdit() {
+    if (!session || !editing || !editName.trim()) return
+    setWorking(true)
     setActionError(null)
     try {
-      const updated = await updateDrone(drone.id, { status }, session.token)
-      setDrones((current) => (current ?? []).map((d) => (d.id === drone.id ? updated : d)))
+      const updated = await updateDrone(
+        editing.id,
+        { name: editName.trim(), status: editStatus },
+        session.token,
+      )
+      setDrones((current) => (current ?? []).map((d) => (d.id === editing.id ? updated : d)))
+      setEditing(null)
     } catch {
       setActionError('Could not update this drone')
+    } finally {
+      setWorking(false)
     }
   }
 
@@ -126,27 +156,18 @@ export function FleetPage() {
                 <td>{drone.name}</td>
                 <td>{drone.model}</td>
                 <td className="mono">{drone.serial}</td>
-                <td>
-                  {isAdmin ? (
-                    <select
-                      aria-label={`Status for ${drone.name}`}
-                      value={drone.status}
-                      onChange={(e) => handleStatus(drone, e.target.value as DroneStatus)}
-                    >
-                      {STATUSES.map((status) => (
-                        <option key={status} value={status}>
-                          {status}
-                        </option>
-                      ))}
-                    </select>
-                  ) : (
-                    <span className="mono">{drone.status}</span>
-                  )}
-                </td>
+                <td className="mono">{drone.status}</td>
                 <td className="mono">{drone.flight_hours}</td>
                 <td className="mono">{drone.missions_flown}</td>
                 {isAdmin && (
                   <td className="row-action">
+                    <button
+                      type="button"
+                      aria-label={`Edit ${drone.name}`}
+                      onClick={() => openEdit(drone)}
+                    >
+                      Edit
+                    </button>
                     <button
                       type="button"
                       className="fleet-remove"
@@ -207,10 +228,49 @@ export function FleetPage() {
         />
       )}
 
+      {editing && (
+        <ConfirmDialog
+          title={`Edit ${editing.name}`}
+          confirmLabel="Save"
+          busy={working}
+          error={actionError}
+          body={
+            <div className="fleet-form">
+              <label>
+                Name
+                <input value={editName} onChange={(e) => setEditName(e.target.value)} />
+              </label>
+              <label>
+                Status
+                <select
+                  value={editStatus}
+                  onChange={(e) => setEditStatus(e.target.value as DroneStatus)}
+                >
+                  {STATUSES.map((status) => (
+                    <option key={status} value={status}>
+                      {status}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              {/* the two the system sets itself, an admin only pulls one out or puts it back */}
+              <p className="text-dim">
+                Available and in flight follow the missions this aircraft is booked on.
+              </p>
+            </div>
+          }
+          onConfirm={handleEdit}
+          onCancel={() => {
+            setEditing(null)
+            setActionError(null)
+          }}
+        />
+      )}
+
       {removing && (
         <ConfirmDialog
           title={`Remove ${removing.name}?`}
-          body="This takes the aircraft out of the fleet along with its recorded hours."
+          body={removalWarning(removing)}
           confirmLabel="Remove"
           danger
           busy={working}

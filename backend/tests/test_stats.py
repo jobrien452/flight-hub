@@ -100,3 +100,21 @@ async def test_a_pilot_with_no_work_still_shows_up(client, admin_headers, pilot_
 
     rows = {row["name"]: row for row in resp.json()["pilots"]}
     assert rows["Pete Pilot"]["missions_assigned"] == 0
+
+
+async def test_a_deleted_drone_leaves_the_fleet_count_but_keeps_its_hours(
+    client, admin_headers, admin_user: User
+):
+    flying = Drone(name="Falcon 1", owner_id=str(admin_user.id), flight_hours=2, missions_flown=1)
+    await flying.insert()
+    gone = Drone(name="Falcon 2", owner_id=str(admin_user.id), flight_hours=5, missions_flown=4)
+    await gone.insert()
+    await client.delete(f"/drones/{gone.id}", headers=admin_headers)
+
+    body = (await client.get("/stats", headers=admin_headers)).json()
+
+    # the aircraft is out of the fleet, what it flew is still the operation's history
+    assert body["drones_total"] == 1
+    assert body["drones_by_status"]["retired"] == 0
+    assert body["fleet_flight_hours"] == 7
+    assert body["fleet_missions_flown"] == 5

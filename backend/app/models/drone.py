@@ -21,6 +21,8 @@ class Drone(Document):
     # where the aircraft puts its video, the jetson serves rtsp on the airframe
     stream_url: str = ""
     status: DroneStatus = DroneStatus.AVAILABLE
+    # deleted, but kept because missions it flew still read their aircraft off it
+    hidden: bool = False
     owner_id: str  # the admin whose fleet this belongs to
     # the digital twin's running totals, both fed by submitted pilot reports
     flight_hours: float = 0

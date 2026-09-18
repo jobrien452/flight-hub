@@ -1,13 +1,9 @@
-.fleet-table select {
-  font: inherit;
-  color: var(--text);
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 3px;
-  padding: 3px 6px;
+.fleet-table .row-action {
+  text-align: right;
+  white-space: nowrap;
 }
 
-.fleet-remove {
+.fleet-table .row-action button {
   font: inherit;
   font-size: 12px;
   color: var(--text-dim);
@@ -15,12 +11,17 @@
   border: 1px solid var(--border);
   border-radius: 3px;
   padding: 3px 8px;
+  margin-left: 6px;
   cursor: pointer;
 }
 
-.fleet-remove:hover {
+.fleet-table .row-action button:hover {
   color: var(--text);
   border-color: var(--text-dim);
+}
+
+.fleet-remove:hover {
+  border-color: var(--danger);
 }
 
 .fleet-form {
@@ -46,4 +47,20 @@
   border: 1px solid var(--border);
   border-radius: 3px;
   padding: 6px 8px;
+}
+
+.fleet-form select {
+  font: inherit;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 6px 8px;
+}
+
+.fleet-form p {
+  margin: 0;
+  font-size: 12px;
+  text-transform: none;
+  letter-spacing: 0;
 }

@@ -85,13 +85,82 @@ describe('FleetPage', () => {
     expect(await screen.findByText('Falcon 2')).toBeInTheDocument()
   })
 
-  it('takes a drone out of rotation', async () => {
+  it('keeps status off the table, it is set in the edit window', async () => {
     renderPage()
     await screen.findByText(fixtureDrone.name)
 
-    await userEvent.selectOptions(screen.getByLabelText(/status for falcon 1/i), 'maintenance')
+    expect(screen.queryByLabelText(/status for/i)).not.toBeInTheDocument()
+    expect(screen.getByText('available')).toBeInTheDocument()
+  })
 
-    expect(await screen.findByDisplayValue('maintenance')).toBeInTheDocument()
+  it('renames a drone from the edit window', async () => {
+    server.use(
+      http.patch(`${API_URL}/drones/:id`, async ({ request }) => {
+        const body = (await request.json()) as Record<string, unknown>
+        return HttpResponse.json({ ...fixtureDrone, ...body })
+      }),
+    )
+    renderPage()
+    await screen.findByText(fixtureDrone.name)
+
+    await userEvent.click(screen.getByRole('button', { name: /edit falcon 1/i }))
+    const dialog = within(screen.getByRole('dialog'))
+    await userEvent.clear(dialog.getByLabelText(/name/i))
+    await userEvent.type(dialog.getByLabelText(/name/i), 'Falcon One')
+    await userEvent.click(dialog.getByRole('button', { name: /save/i }))
+
+    expect(await screen.findByText('Falcon One')).toBeInTheDocument()
+  })
+
+  it('takes a drone out of rotation from the edit window', async () => {
+    renderPage()
+    await screen.findByText(fixtureDrone.name)
+
+    await userEvent.click(screen.getByRole('button', { name: /edit falcon 1/i }))
+    const dialog = within(screen.getByRole('dialog'))
+    await userEvent.selectOptions(dialog.getByLabelText(/status/i), 'maintenance')
+    await userEvent.click(dialog.getByRole('button', { name: /save/i }))
+
+    expect(await screen.findByText('maintenance')).toBeInTheDocument()
+  })
+
+  it('says an aircraft that has flown is kept for its history', async () => {
+    renderPage()
+    await screen.findByText(fixtureDrone.name)
+
+    await userEvent.click(screen.getByRole('button', { name: /remove falcon 1/i }))
+
+    // the fixture has 8 missions on it, so this one cannot simply go
+    expect(screen.getByRole('dialog')).toHaveTextContent(/retired/i)
+    expect(screen.getByRole('dialog')).toHaveTextContent(/8 missions/i)
+  })
+
+  it('says a drone with no history is gone for good', async () => {
+    server.use(
+      http.get(`${API_URL}/drones`, () =>
+        HttpResponse.json([{ ...fixtureDrone, missions_flown: 0, flight_hours: 0 }]),
+      ),
+    )
+    renderPage()
+    await screen.findByText(fixtureDrone.name)
+
+    await userEvent.click(screen.getByRole('button', { name: /remove falcon 1/i }))
+
+    expect(screen.getByRole('dialog')).toHaveTextContent(/permanently/i)
+  })
+
+  it('warns that a booked mission goes back to draft', async () => {
+    server.use(
+      http.get(`${API_URL}/drones`, () =>
+        HttpResponse.json([{ ...fixtureDrone, booked_on: 'mission-1' }]),
+      ),
+    )
+    renderPage()
+    await screen.findByText(fixtureDrone.name)
+
+    await userEvent.click(screen.getByRole('button', { name: /remove falcon 1/i }))
+
+    expect(screen.getByRole('dialog')).toHaveTextContent(/back to draft/i)
   })
 
   it('removes a drone once the admin confirms', async () => {
