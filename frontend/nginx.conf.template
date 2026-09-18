@@ -41,3 +41,33 @@ server {
         add_header Cache-Control "public, immutable";
     }
 }
+
+# the bare apex. it only ever 301s to the canonical name, nothing is served here.
+# when there's no second name to redirect this is the .invalid placeholder from
+# compose, which no real request can ever match
+server {
+    listen 80;
+    server_name ${REDIRECT_DOMAIN};
+
+    # let's encrypt verifies each name on its own, so the apex needs its own
+    # challenge path or the cert request for it fails
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+
+    location / {
+        return 301 https://${DOMAIN}$request_uri;
+    }
+}
+
+server {
+    listen 443 ssl;
+    server_name ${REDIRECT_DOMAIN};
+
+    # same cert as the canonical name, certbot keeps both names in one file
+    # under the first -d it was given
+    ssl_certificate /etc/letsencrypt/live/${DOMAIN}/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/${DOMAIN}/privkey.pem;
+
+    return 301 https://${DOMAIN}$request_uri;
+}
