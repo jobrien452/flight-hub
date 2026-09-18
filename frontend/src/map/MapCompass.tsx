@@ -43,7 +43,7 @@ export function MapCompass({ bearing, onReset }: MapCompassProps) {
         })}
         <polygon points="22,10 26,24 22,21 18,24" className="compass-needle-north" />
         <polygon points="22,34 18,20 22,23 26,20" className="compass-needle-south" />
-        <text x="22" y="17" className="compass-north-letter" textAnchor="middle">
+        <text x="22" y="18" className="compass-north-letter" textAnchor="middle">
           N
         </text>
       </svg>

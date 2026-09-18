@@ -1,7 +1,7 @@
 .map-compass {
   position: absolute;
-  top: 12px;
-  right: 12px;
+  left: 10px;
+  bottom: 58px;
   z-index: 2;
   display: flex;
   flex-direction: column;
@@ -49,7 +49,7 @@
 
 .compass-north-letter {
   fill: var(--text);
-  font-size: 7px;
+  font-size: 9px;
   font-weight: 600;
 }
 
