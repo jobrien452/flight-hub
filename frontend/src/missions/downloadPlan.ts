@@ -8,5 +8,6 @@ export async function downloadPlan(id: string, name: string, token: string): Pro
   link.href = url
   link.download = `${name.replace(/[^\w-]+/g, '-') || 'mission'}.waypoints`
   link.click()
-  URL.revokeObjectURL(url)
+  // let the browser take the url before it is torn down
+  setTimeout(() => URL.revokeObjectURL(url), 0)
 }

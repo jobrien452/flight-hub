@@ -18,6 +18,11 @@ from app.security import create_access_token, generate_token, hash_password, ver
 router = APIRouter(prefix="/auth", tags=["auth"])
 logger = logging.getLogger(__name__)
 
+# an unknown email should cost what a real one costs. without this the reply
+# comes back sooner for an address nobody has registered, which answers the
+# question "is this person a user here" to anyone with a stopwatch
+_TIMING_EQUALISER = hash_password("no user by that name")
+
 
 def _is_expired(expires_at: datetime | None) -> bool:
     # mongo round-trips datetimes as naive UTC, so compare on equal footing
@@ -39,6 +44,7 @@ async def login(payload: LoginRequest) -> LoginResponse:
     user = await User.find_one(User.email == payload.email)
     # same generic error whether the email is unknown, unclaimed, or the password's wrong
     if user is None or user.password_hash is None:
+        verify_password(payload.password, _TIMING_EQUALISER)
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
     if not verify_password(payload.password, user.password_hash):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)

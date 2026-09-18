@@ -1,16 +1,15 @@
-from beanie import PydanticObjectId
 from fastapi import HTTPException, status
 
 from app.deps import CurrentUser
+from app.ids import to_object_id
 from app.models.drone import Drone
 from app.models.mission import Mission, MissionStatus
 from app.models.user import Role
 
 
 async def _load(drone_id: str) -> Drone:
-    try:
-        oid = PydanticObjectId(drone_id)
-    except ValueError:
+    oid = to_object_id(drone_id)
+    if oid is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
     drone = await Drone.get(oid)
     if drone is None:

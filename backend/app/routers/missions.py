@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import PlainTextResponse
 
 from app.bookings import holder_of
+from app.ids import to_object_id
 from app.deps import CurrentUser, get_current_user, require_admin
 from app.drone_access import get_owned_drone
 from app.email_client import send_mission_assigned_email, send_mission_unassigned_email
@@ -42,9 +43,8 @@ def _out(mission: Mission) -> MissionOut:
 
 
 async def _get_pilot(pilot_id: str) -> User:
-    try:
-        oid = PydanticObjectId(pilot_id)
-    except ValueError:
+    oid = to_object_id(pilot_id)
+    if oid is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
     pilot = await User.get(oid)
     if pilot is None:
@@ -130,6 +130,9 @@ async def update_mission(
 ) -> MissionOut:
     mission = await get_owned_mission(mission_id, current_user)
     updates = payload.model_dump(exclude_unset=True)
+    # the same vetting the assignment route does, this way in had none
+    for pilot_id in updates.get("assigned_pilot_ids") or []:
+        await _get_pilot(pilot_id)
     # booking an aircraft only works out of your own fleet, and only one that is
     # free. re-checked only when the booking changes, so saving a mission whose
     # drone has since taken off still works

@@ -1,7 +1,6 @@
 from datetime import datetime, timezone
 
-from beanie import PydanticObjectId
-
+from app.ids import to_object_id
 from app.models.drone import Drone, DroneStatus
 
 # everything here is best effort, a mission that has no drone booked against it
@@ -9,13 +8,8 @@ from app.models.drone import Drone, DroneStatus
 
 
 async def _load(drone_id: str | None) -> Drone | None:
-    if not drone_id:
-        return None
-    try:
-        oid = PydanticObjectId(drone_id)
-    except ValueError:
-        return None
-    return await Drone.get(oid)
+    oid = to_object_id(drone_id)
+    return await Drone.get(oid) if oid else None
 
 
 async def _save(drone: Drone) -> None:

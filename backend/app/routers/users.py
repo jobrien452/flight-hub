@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.deps import CurrentUser, get_current_user, require_admin
+from app.ids import to_object_id
 from app.models.user import Role, User
 from app.schemas.user import UserOut
 
@@ -9,7 +10,7 @@ router = APIRouter(prefix="/users", tags=["users"])
 
 @router.get("/me", response_model=UserOut)
 async def read_me(current_user: CurrentUser = Depends(get_current_user)) -> UserOut:
-    user = await User.get(current_user.user_id)
+    user = await User.get(to_object_id(current_user.user_id))
     if user is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
     return UserOut(
@@ -27,6 +28,8 @@ async def list_users(
     current_user: CurrentUser = Depends(require_admin),
 ) -> list[UserOut]:
     users = await (User.find(User.role == role) if role else User.find_all()).to_list()
+    # the pilot pool is shared, other admins are not part of it
+    users = [u for u in users if u.role == Role.PILOT or str(u.id) == current_user.user_id]
     return [
         UserOut(
             id=str(u.id),

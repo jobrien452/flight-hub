@@ -42,9 +42,17 @@ export function FleetPage() {
 
   useEffect(() => {
     if (!session) return
+    let cancelled = false
     listDrones(session.token, showRetired)
-      .then(setDrones)
-      .catch(() => setLoadError('Could not load the fleet'))
+      .then((fleet) => {
+        if (!cancelled) setDrones(fleet)
+      })
+      .catch(() => {
+        if (!cancelled) setLoadError('Could not load the fleet')
+      })
+    return () => {
+      cancelled = true
+    }
   }, [session, showRetired])
 
   function closeAdd() {

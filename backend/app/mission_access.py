@@ -1,15 +1,14 @@
-from beanie import PydanticObjectId
 from fastapi import HTTPException, status
 
 from app.deps import CurrentUser
+from app.ids import to_object_id
 from app.models.mission import Mission, MissionStatus
 from app.models.user import Role
 
 
 async def get_owned_mission(mission_id: str, current_user: CurrentUser) -> Mission:
-    try:
-        oid = PydanticObjectId(mission_id)
-    except ValueError:
+    oid = to_object_id(mission_id)
+    if oid is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
     mission = await Mission.get(oid)
     if mission is None:

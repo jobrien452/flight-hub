@@ -1,6 +1,7 @@
 from beanie import PydanticObjectId
 from fastapi import APIRouter, Depends, HTTPException, status
 
+from app.ids import to_object_id
 from app.deps import CurrentUser, require_session
 from app.models.api_token import ApiToken
 from app.schemas.api_token import ApiTokenCreate, ApiTokenCreated, ApiTokenOut
@@ -48,9 +49,8 @@ async def revoke_api_token(
     token_id: str,
     current_user: CurrentUser = Depends(require_session),
 ) -> None:
-    try:
-        oid = PydanticObjectId(token_id)
-    except ValueError:
+    oid = to_object_id(token_id)
+    if oid is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
 
     token = await ApiToken.get(oid)

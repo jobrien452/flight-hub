@@ -14,10 +14,13 @@ interface MissionAircraftProps {
 
 // what this mission is flying with, the aircraft is fetched but the payload
 // rides on the mission itself so it still reads right if the catalogue changes
+// one piece of state rather than two, so a lookup that failed once cannot stick
+// around and claim the next aircraft is missing too
+type Lookup = { state: 'loading' } | { state: 'ready'; drone: Drone } | { state: 'missing' }
+
 export function MissionAircraft({ mission }: MissionAircraftProps) {
   const { session } = useAuth()
-  const [drone, setDrone] = useState<Drone | null>(null)
-  const [missing, setMissing] = useState(false)
+  const [lookup, setLookup] = useState<Lookup>({ state: 'loading' })
 
   useEffect(() => {
     if (!session || !mission.drone_id) return
@@ -25,10 +28,10 @@ export function MissionAircraft({ mission }: MissionAircraftProps) {
 
     getDrone(mission.drone_id, session.token)
       .then((found) => {
-        if (!cancelled) setDrone(found)
+        if (!cancelled) setLookup({ state: 'ready', drone: found })
       })
       .catch(() => {
-        if (!cancelled) setMissing(true)
+        if (!cancelled) setLookup({ state: 'missing' })
       })
 
     return () => {
@@ -36,6 +39,7 @@ export function MissionAircraft({ mission }: MissionAircraftProps) {
     }
   }, [session, mission.drone_id])
 
+  const drone = lookup.state === 'ready' ? lookup.drone : null
   const { payload } = mission
   // only for the aircraft flyby publish figures for, anything else is left alone
   const specs = drone ? findAircraft(drone.model) : undefined
@@ -48,8 +52,12 @@ export function MissionAircraft({ mission }: MissionAircraftProps) {
       <div className="mission-aircraft-cards">
         <div className="mission-aircraft-card">
           {!mission.drone_id && <p className="text-dim">No aircraft booked</p>}
-          {mission.drone_id && missing && <p className="text-dim">Aircraft unavailable</p>}
-          {mission.drone_id && !missing && !drone && <p className="text-dim">Loading...</p>}
+          {mission.drone_id && lookup.state === 'missing' && (
+            <p className="text-dim">Aircraft unavailable</p>
+          )}
+          {mission.drone_id && lookup.state === 'loading' && (
+            <p className="text-dim">Loading...</p>
+          )}
           {drone && (
             <>
               <strong>{drone.name}</strong>

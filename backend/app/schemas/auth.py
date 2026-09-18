@@ -1,6 +1,12 @@
-from pydantic import BaseModel, EmailStr
+from typing import Annotated
+
+from pydantic import BaseModel, EmailStr, Field
 
 from app.models.user import Role
+
+# bcrypt silently ignores anything past 72 bytes, so refuse it rather than let
+# someone believe in a passphrase that is not all being checked
+Password = Annotated[str, Field(min_length=8, max_length=72)]
 
 
 class LoginRequest(BaseModel):
@@ -17,7 +23,7 @@ class LoginResponse(BaseModel):
 
 class AcceptInviteRequest(BaseModel):
     token: str
-    password: str
+    password: Password
 
 
 class RequestPasswordResetRequest(BaseModel):
@@ -26,4 +32,4 @@ class RequestPasswordResetRequest(BaseModel):
 
 class ResetPasswordRequest(BaseModel):
     token: str
-    password: str
+    password: Password

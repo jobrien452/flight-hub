@@ -1,6 +1,9 @@
 import os
 
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+DEV_JWT_SECRET = "dev-secret-change-me"
 
 # has to come from the real environment, not from a file, since it decides which
 # files get read. compose and your shell can set it, .env.dev cannot set itself
@@ -18,7 +21,7 @@ class Settings(BaseSettings):
     # local mongo by default, override via env in docker-compose
     mongo_url: str = "mongodb://localhost:27017"
     mongo_db_name: str = "flyby"
-    jwt_secret: str = "dev-secret-change-me"
+    jwt_secret: str = DEV_JWT_SECRET
     jwt_algorithm: str = "HS256"
 
     # how long an invite/reset link stays clickable
@@ -54,6 +57,14 @@ class Settings(BaseSettings):
     # (e.g. local dev, vite on :5173 hitting this on :8000). Not needed when nginx
     # reverse-proxies /api to this service, that's already same-origin.
     cors_origins: str = "http://localhost:5173"
+
+    @model_validator(mode="after")
+    def _refuse_the_shipped_secret(self) -> "Settings":
+        if self.app_env == "prod" and self.jwt_secret == DEV_JWT_SECRET:
+            raise ValueError(
+                "JWT_SECRET is still the one from the repo, set a real one before running as prod"
+            )
+        return self
 
     @property
     def cors_origin_list(self) -> list[str]:

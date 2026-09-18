@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 from beanie import PydanticObjectId
 from fastapi import APIRouter, Depends, HTTPException, status
 
+from app.ids import to_object_id
 from app.deps import CurrentUser, get_current_user
 from app.fleet import log_flight_time, log_mission_flown, set_drone_status
 from app.mission_access import get_owned_mission
@@ -53,9 +54,8 @@ async def _on_submitted(mission_id: str, report: MissionReport) -> None:
 
 
 async def _get_own_report(mission_id: str, report_id: str, current_user: CurrentUser) -> MissionReport:
-    try:
-        oid = PydanticObjectId(report_id)
-    except ValueError:
+    oid = to_object_id(report_id)
+    if oid is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND)
     report = await MissionReport.get(oid)
     if report is None or report.mission_id != mission_id:
@@ -115,6 +115,9 @@ async def update_report(
     if current_user.role != Role.PILOT:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
     report = await _get_own_report(mission_id, report_id, current_user)
+    # the flight is only banked as it is handed in, editing it afterwards must
+    # not add its hours to the aircraft a second time
+    already_submitted = report.status == MissionReportStatus.SUBMITTED
     updates = payload.model_dump(exclude_unset=True)
     for field, value in updates.items():
         setattr(report, field, value)
@@ -123,6 +126,6 @@ async def update_report(
         report.submitted_at = report.updated_at
     await report.save()
 
-    if report.status == MissionReportStatus.SUBMITTED:
+    if report.status == MissionReportStatus.SUBMITTED and not already_submitted:
         await _on_submitted(mission_id, report)
     return _out(report)
