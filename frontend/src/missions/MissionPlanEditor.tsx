@@ -10,12 +10,22 @@ import {
   type MapTool,
   type ToolOverlay,
 } from '../tools/MapTool'
-import type { Mission, PlanParams, Waypoint } from '../types/mission'
+import type {
+  CorridorPlanParams,
+  Mission,
+  PlanParams,
+  SurveyPlanParams,
+  Waypoint,
+} from '../types/mission'
 import { ToolIcon } from './ToolIcon'
 import { WaypointDrawer } from './WaypointDrawer'
 import './MissionPlanEditor.css'
 
 type ToolId = 'waypoint' | 'rectangle_survey' | 'corridor' | 'select'
+
+// a shape being drawn but not yet turned into a route. kept apart from
+// planParams, which describes the plan as actually saved
+type DraftParams = SurveyPlanParams | CorridorPlanParams
 
 // toolbar order, select first since it is what the editor opens on
 const TOOL_ORDER: ToolId[] = ['select', 'waypoint', 'rectangle_survey', 'corridor']
@@ -64,6 +74,7 @@ export function MissionPlanEditor({
   const [spacing, setSpacing] = useState(20)
   const [corridorWidth, setCorridorWidth] = useState(40)
   const [planGenerated, setPlanGenerated] = useState(false)
+  const [draftParams, setDraftParams] = useState<DraftParams | null>(null)
   // the plan as it was before the current draft generated anything, so a second
   // Generate replaces that output instead of stacking another copy on top
   const [baseWaypoints, setBaseWaypoints] = useState<Waypoint[] | null>(null)
@@ -102,12 +113,12 @@ export function MissionPlanEditor({
       rectangle_survey: createRectangleSurveyTool(getSettings, (_points, params) => {
         // the snapped box is a draft drawn by the overlay, it must not wipe the
         // waypoints already planned. only Generate turns it into a route
-        setPlanParams(params)
+        setDraftParams(params)
         setPlanGenerated(false)
       }),
       corridor: createCorridorTool(getSettings, (_points, params) => {
         // same for the traced centre line, a draft until Generate Corridor runs
-        setPlanParams(params)
+        setDraftParams(params)
         setPlanGenerated(false)
       }),
       select: createSelectTool({
@@ -152,6 +163,9 @@ export function MissionPlanEditor({
     setActiveToolId(id)
     // a new tool starts a new draft, whatever is planned now is what it builds on
     setBaseWaypoints(null)
+    // a shape that was never generated goes with the tool that drew it, so coming
+    // back offers nothing to generate until a fresh one is drawn
+    setDraftParams(null)
     setSelectedIndex(null)
     setDrawerOpen(false)
     setOverlay(tools[id].renderOverlay())
@@ -160,16 +174,18 @@ export function MissionPlanEditor({
   // the box is just an outline until this runs, uses whatever altitude/spacing
   // are set right now so tweaking settings and regenerating works
   function handleGenerateSurvey() {
-    if (planParams?.type !== 'survey') return
-    const params = { ...planParams, altitude, spacing }
+    if (draftParams?.type !== 'survey') return
+    const params = { ...draftParams, altitude, spacing }
+    setDraftParams(params)
     setPlanParams(params)
     appendGenerated(generateSurveyPlan(params))
   }
 
   // same two step shape as the survey, the traced line is not a flight plan yet
   function handleGenerateCorridor() {
-    if (planParams?.type !== 'corridor') return
-    const params = { ...planParams, altitude, spacing, width: corridorWidth }
+    if (draftParams?.type !== 'corridor') return
+    const params = { ...draftParams, altitude, spacing, width: corridorWidth }
+    setDraftParams(params)
     setPlanParams(params)
     appendGenerated(generateCorridorPlan(params))
   }
@@ -181,6 +197,12 @@ export function MissionPlanEditor({
     setBaseWaypoints(base)
     setWaypoints([...base, ...generated])
     setPlanGenerated(true)
+  }
+
+  function updateSetting(apply: (value: number) => void, raw: string) {
+    apply(Number(raw))
+    // the generated route used the old numbers, so let it be generated again
+    setPlanGenerated(false)
   }
 
   function handleWaypointChange(changes: Partial<Waypoint>) {
@@ -204,6 +226,13 @@ export function MissionPlanEditor({
   const selectedWaypoint = selectedIndex === null ? undefined : waypoints[selectedIndex]
   const readyToPublish = name.trim().length > 0 && waypoints.length > 0
   const canPublish = onPublish && mission && mission.status === 'draft'
+
+  // the generate step belongs to the tool that drew the draft, so it is offered
+  // only while that tool is up and only until its output is actually generated
+  const drafting =
+    (activeToolId === 'rectangle_survey' && draftParams?.type === 'survey') ||
+    (activeToolId === 'corridor' && draftParams?.type === 'corridor')
+  const canGenerate = drafting && !planGenerated
 
   // the select tool draws every waypoint as a handle, so keep it in step as they change
   const liveOverlay = activeToolId === 'select' ? activeTool.renderOverlay() : overlay
@@ -249,7 +278,7 @@ export function MissionPlanEditor({
               <input
                 type="number"
                 value={altitude}
-                onChange={(e) => setAltitude(Number(e.target.value))}
+                onChange={(e) => updateSetting(setAltitude, e.target.value)}
               />
             </label>
           )}
@@ -259,7 +288,7 @@ export function MissionPlanEditor({
               <input
                 type="number"
                 value={spacing}
-                onChange={(e) => setSpacing(Number(e.target.value))}
+                onChange={(e) => updateSetting(setSpacing, e.target.value)}
               />
             </label>
           )}
@@ -269,27 +298,27 @@ export function MissionPlanEditor({
               <input
                 type="number"
                 value={corridorWidth}
-                onChange={(e) => setCorridorWidth(Number(e.target.value))}
+                onChange={(e) => updateSetting(setCorridorWidth, e.target.value)}
               />
             </label>
           )}
-          {planParams?.type === 'survey' && (
+          {canGenerate && activeToolId === 'rectangle_survey' && (
             <button type="button" onClick={handleGenerateSurvey}>
               Generate Survey
             </button>
           )}
-          {planParams?.type === 'corridor' && (
+          {canGenerate && activeToolId === 'corridor' && (
             <button type="button" onClick={handleGenerateCorridor}>
               Generate Corridor
             </button>
           )}
-          {planParams?.type === 'survey' && !planGenerated && (
-            <p className="text-dim mono">box placed, click Generate Survey</p>
-          )}
-          {planParams?.type === 'corridor' && !planGenerated && (
-            <p className="text-dim mono">line traced, click Generate Corridor</p>
-          )}
-          {(planGenerated || (planParams?.type !== 'survey' && planParams?.type !== 'corridor')) && (
+          {canGenerate ? (
+            <p className="text-dim mono">
+              {activeToolId === 'rectangle_survey'
+                ? 'box placed, click Generate Survey'
+                : 'line traced, click Generate Corridor'}
+            </p>
+          ) : (
             <p className="text-dim mono">{waypoints.length} waypoints</p>
           )}
         </fieldset>

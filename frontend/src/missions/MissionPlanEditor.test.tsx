@@ -617,10 +617,158 @@ describe('drafts do not eat the plan', () => {
     renderEditor()
     await placeBox()
     await userEvent.click(await screen.findByRole('button', { name: 'Generate Survey' }))
-    const first = (await screen.findByText(/^\d+ waypoints$/)).textContent
+    const first = Number((await screen.findByText(/^\d+ waypoints$/)).textContent?.split(' ')[0])
 
-    await userEvent.click(screen.getByRole('button', { name: 'Generate Survey' }))
+    const spacing = screen.getByLabelText(/line spacing/i)
+    await userEvent.clear(spacing)
+    await userEvent.type(spacing, '100')
+    await userEvent.click(await screen.findByRole('button', { name: 'Generate Survey' }))
 
-    expect(screen.getByText(/^\d+ waypoints$/).textContent).toBe(first)
+    const second = Number(screen.getByText(/^\d+ waypoints$/).textContent?.split(' ')[0])
+    // wider spacing means fewer lines, stacking a second sweep could only add
+    expect(second).toBeLessThan(first)
+  })
+})
+
+
+describe('the generate button', () => {
+  it('goes away once the corridor has been generated', async () => {
+    renderEditor()
+    await userEvent.click(screen.getByRole('button', { name: 'Corridor' }))
+    await userEvent.click(screen.getByText('click A'))
+    await userEvent.click(screen.getByText('click B'))
+
+    await userEvent.click(screen.getByRole('button', { name: 'Generate Corridor' }))
+
+    expect(screen.queryByRole('button', { name: 'Generate Corridor' })).not.toBeInTheDocument()
+  })
+
+  it('goes away once the survey has been generated', async () => {
+    renderEditor()
+    await placeBox()
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Generate Survey' }))
+
+    expect(screen.queryByRole('button', { name: 'Generate Survey' })).not.toBeInTheDocument()
+  })
+
+  it('is not offered on the select or waypoint tools', async () => {
+    renderEditor()
+    await userEvent.click(screen.getByRole('button', { name: 'Corridor' }))
+    await userEvent.click(screen.getByText('click A'))
+    await userEvent.click(screen.getByText('click B'))
+    expect(screen.getByRole('button', { name: 'Generate Corridor' })).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Select' }))
+    expect(screen.queryByRole('button', { name: 'Generate Corridor' })).not.toBeInTheDocument()
+
+    await activateWaypointTool()
+    expect(screen.queryByRole('button', { name: 'Generate Corridor' })).not.toBeInTheDocument()
+  })
+
+  it('does not offer the survey button while the corridor tool is up', async () => {
+    renderEditor()
+    await placeBox()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Corridor' }))
+
+    expect(screen.queryByRole('button', { name: 'Generate Survey' })).not.toBeInTheDocument()
+  })
+
+  it('comes back when a setting makes the generated plan stale', async () => {
+    renderEditor()
+    await placeBox()
+    await userEvent.click(await screen.findByRole('button', { name: 'Generate Survey' }))
+    expect(screen.queryByRole('button', { name: 'Generate Survey' })).not.toBeInTheDocument()
+
+    const spacing = screen.getByLabelText(/line spacing/i)
+    await userEvent.clear(spacing)
+    await userEvent.type(spacing, '40')
+
+    expect(screen.getByRole('button', { name: 'Generate Survey' })).toBeInTheDocument()
+  })
+
+  it('shows the waypoint count rather than a prompt once nothing is pending', async () => {
+    renderEditor()
+    await placeBox()
+    await userEvent.click(await screen.findByRole('button', { name: 'Generate Survey' }))
+
+    expect(screen.queryByText(/click Generate Survey/i)).not.toBeInTheDocument()
+    expect(screen.getByText(/^\d+ waypoints$/)).toBeInTheDocument()
+  })
+})
+
+describe('an ungenerated draft does not survive the tool it was drawn with', () => {
+  async function traceCorridor() {
+    await userEvent.click(screen.getByRole('button', { name: 'Corridor' }))
+    await userEvent.click(screen.getByText('click A'))
+    await userEvent.click(screen.getByText('click B'))
+  }
+
+  it('throws the corridor away when another tool is picked up', async () => {
+    renderEditor()
+    await traceCorridor()
+    expect(screen.getByRole('button', { name: 'Generate Corridor' })).toBeInTheDocument()
+
+    await activateWaypointTool()
+    await userEvent.click(screen.getByRole('button', { name: 'Corridor' }))
+
+    // the ghost went with the tool switch, so there is nothing left to generate
+    expect(screen.queryByRole('button', { name: 'Generate Corridor' })).not.toBeInTheDocument()
+    expect(screen.getByText(/^\d+ waypoints$/)).toBeInTheDocument()
+  })
+
+  it('throws an ungenerated survey box away the same way', async () => {
+    renderEditor()
+    await placeBox()
+    expect(await screen.findByRole('button', { name: 'Generate Survey' })).toBeInTheDocument()
+
+    await activateWaypointTool()
+    await userEvent.click(screen.getByRole('button', { name: 'Rectangle Survey' }))
+
+    expect(screen.queryByRole('button', { name: 'Generate Survey' })).not.toBeInTheDocument()
+  })
+
+  it('offers to generate again once a fresh shape is drawn', async () => {
+    renderEditor()
+    await traceCorridor()
+    await activateWaypointTool()
+
+    await traceCorridor()
+
+    expect(screen.getByRole('button', { name: 'Generate Corridor' })).toBeInTheDocument()
+  })
+
+  it('keeps what was already generated when the tool is left', async () => {
+    renderEditor()
+    await placeBox()
+    await userEvent.click(await screen.findByRole('button', { name: 'Generate Survey' }))
+    const count = screen.getByText(/^\d+ waypoints$/).textContent
+
+    await activateWaypointTool()
+    await userEvent.click(screen.getByRole('button', { name: 'Rectangle Survey' }))
+
+    expect(screen.getByText(/^\d+ waypoints$/).textContent).toBe(count)
+  })
+
+  it('does not offer to generate a survey mission the moment it is opened', async () => {
+    renderEditor(vi.fn(), {
+      ...fixtureMission,
+      plan_params: {
+        type: 'survey',
+        boundary: [
+          { lat: 1, lng: 1 },
+          { lat: 1, lng: 2 },
+          { lat: 2, lng: 2 },
+          { lat: 2, lng: 1 },
+        ],
+        altitude: 50,
+        spacing: 20,
+      },
+    })
+
+    await userEvent.click(screen.getByRole('button', { name: 'Rectangle Survey' }))
+
+    expect(screen.queryByRole('button', { name: 'Generate Survey' })).not.toBeInTheDocument()
   })
 })
