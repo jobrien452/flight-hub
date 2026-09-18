@@ -69,17 +69,6 @@ For more granular controls of the system check the .env file for the backend
 
 Frontend env file only contains the api url and need much less configuration
 
-Dev Notes:
-
-Accessible api - this read api tokens to me
-Map component - start 2d top down move to 3d if time or easier than im assuming
-Two users types - Types is roles/enums
-    Admin - classic CRUD 
-    Pilot - just R, however pilots likely need to report data back after a mission so an endpoint made for that will need to give pilots CRU
-
-Android apps contacting our service login/token
-Permanent state updates in database (worded interestingly may need to consider SQL over NOSQL)
-
 Running Tests
 
 Both suites run outside docker, nothing needs to be up first. No mongo, no
