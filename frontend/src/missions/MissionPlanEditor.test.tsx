@@ -1102,10 +1102,22 @@ describe('MissionPlanEditor naming', () => {
     expect(onSubmit.mock.calls[0][0].name).toBe('Survey Site A')
   })
 
-  it('says why the save is not available', async () => {
+  it('says why the save is not available, next to the field that fixes it', async () => {
     renderEditor()
 
-    expect(screen.getByText(/needs a name/i)).toBeInTheDocument()
+    const field = screen.getByPlaceholderText('New Mission')
+    expect(field).toBeInvalid()
+    expect(field).toHaveAccessibleDescription(/needs a name/i)
+  })
+
+  it('stops flagging the field once it has a name', async () => {
+    renderEditor()
+
+    await userEvent.type(screen.getByPlaceholderText('New Mission'), 'Survey Site A')
+
+    const field = screen.getByPlaceholderText('New Mission')
+    expect(field).toBeValid()
+    expect(screen.queryByText(/needs a name/i)).not.toBeInTheDocument()
   })
 })
 

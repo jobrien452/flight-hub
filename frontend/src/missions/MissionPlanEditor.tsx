@@ -302,9 +302,18 @@ export function MissionPlanEditor({
           <input
             value={name}
             placeholder="New Mission"
+            aria-invalid={!named}
+            aria-describedby={named ? undefined : 'mission-name-hint'}
+            className={named ? undefined : 'needs-attention'}
             onChange={(e) => setName(e.target.value)}
           />
         </label>
+        {/* outside the label, it describes the field rather than naming it */}
+        {!named && (
+          <p id="mission-name-hint" className="plan-editor-warning" role="alert">
+            Every mission needs a name
+          </p>
+        )}
 
         <fieldset>
           <legend>Aircraft</legend>
@@ -441,7 +450,6 @@ export function MissionPlanEditor({
         </fieldset>
 
         {error && <p className="auth-error">{error}</p>}
-        {!named && <p className="text-dim plan-editor-hint">Every mission needs a name.</p>}
         <button
           type="button"
           className="button"
