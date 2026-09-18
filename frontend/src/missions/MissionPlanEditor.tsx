@@ -470,7 +470,6 @@ export function MissionPlanEditor({
               ? [
                   { label: 'Ortho GSD', value: `${gsdCmPerPixel(payload, altitude).toFixed(2)} cm/px` },
                   { label: 'Frame width', value: `${footprintWidthM(payload, altitude).toFixed(0)} m` },
-                  { label: 'Payload', value: payload.name },
                 ]
               : undefined
           }
