@@ -5,6 +5,7 @@ import { listUsers } from '../api/users'
 import { useAuth } from '../auth/useAuth'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { MapView } from '../map/MapView'
+import { MissionAircraft } from '../missions/MissionAircraft'
 import { MissionPlanEditor, type MissionPlanEditorValue } from '../missions/MissionPlanEditor'
 import { PilotMissionPanel } from '../missions/PilotMissionPanel'
 import { PlanSummary } from '../missions/PlanSummary'
@@ -184,6 +185,8 @@ export function MissionDetailPage() {
       <div style={{ height: 400 }}>
         <MapView waypoints={mission.waypoints} onMapClick={() => {}} />
       </div>
+
+      <MissionAircraft mission={mission} />
 
       {session?.role === 'pilot' && (
         <PilotMissionPanel mission={mission} onMissionChange={setMission} />

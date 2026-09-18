@@ -5,8 +5,9 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { API_URL } from '../api/client'
 import { AuthProvider } from '../auth/AuthContext'
-import { fixtureMission } from '../mocks/handlers'
+import { fixtureDrone, fixtureMission } from '../mocks/handlers'
 import { server } from '../mocks/server'
+import { PAYLOADS } from '../planning/payloads'
 import { MissionDetailPage } from './MissionDetailPage'
 
 vi.mock('../map/MapView', () => ({
@@ -111,6 +112,21 @@ describe('MissionDetailPage', () => {
     expect(screen.getByText('Distance')).toBeInTheDocument()
     expect(screen.getByText('Est. flight time')).toBeInTheDocument()
     expect(screen.getByText('Altitude')).toBeInTheDocument()
+  })
+
+  it('shows the aircraft booked and the payload it carries', async () => {
+    serveMission({ drone_id: fixtureDrone.id, payload: PAYLOADS[0] })
+    renderPage(adminSession)
+
+    expect(await screen.findByText(fixtureDrone.name)).toBeInTheDocument()
+    expect(screen.getByText(PAYLOADS[0].name)).toBeInTheDocument()
+  })
+
+  it('shows the aircraft to the pilot flying it too', async () => {
+    serveMission({ status: 'published', drone_id: fixtureDrone.id, payload: PAYLOADS[0] })
+    renderPage(pilotSession)
+
+    expect(await screen.findByText(fixtureDrone.name)).toBeInTheDocument()
   })
 })
 
