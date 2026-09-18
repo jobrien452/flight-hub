@@ -342,7 +342,7 @@ export function MissionPlanEditor({
 
           {flagDrone && (
             <p id="mission-aircraft-hint" className="plan-editor-warning" role="alert">
-              Every mission needs an aircraft to fly it
+              An aircraft is required for publishing
             </p>
           )}
 
