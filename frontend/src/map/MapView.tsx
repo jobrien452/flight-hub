@@ -34,16 +34,26 @@ function toOverlayCollection(overlay: ToolOverlay): GeoJSON.FeatureCollection {
   }))
 
   const ring = overlay.ghost ?? []
-  const ghost: GeoJSON.Feature[] =
-    ring.length >= 3
+  const path = ring.map((w) => [w.lng, w.lat])
+  // an open ghost is a route, a closed one is an area. closing a corridor's
+  // centre line would draw a shape it was never meant to cover
+  const open = overlay.ghostClosed === false
+  const ghost: GeoJSON.Feature[] = open
+    ? ring.length >= 2
       ? [
           {
             type: 'Feature',
             properties: {},
-            geometry: {
-              type: 'Polygon',
-              coordinates: [[...ring, ring[0]].map((w) => [w.lng, w.lat])],
-            },
+            geometry: { type: 'LineString', coordinates: path },
+          },
+        ]
+      : []
+    : ring.length >= 3
+      ? [
+          {
+            type: 'Feature',
+            properties: {},
+            geometry: { type: 'Polygon', coordinates: [[...path, path[0]]] },
           },
         ]
       : []
@@ -261,6 +271,12 @@ export function MapView({
               id="overlay-outline"
               type="line"
               filter={['==', ['geometry-type'], 'Polygon']}
+              paint={{ 'line-color': GHOST, 'line-width': 2.5, 'line-dasharray': [3, 2] }}
+            />
+            <Layer
+              id="overlay-ghost-line"
+              type="line"
+              filter={['==', ['geometry-type'], 'LineString']}
               paint={{ 'line-color': GHOST, 'line-width': 2.5, 'line-dasharray': [3, 2] }}
             />
             <Layer

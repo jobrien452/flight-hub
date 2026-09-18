@@ -128,6 +128,7 @@ vi.mock('react-map-gl/mapbox', () => ({
     <div
       data-testid={`mock-source-${id}`}
       data-count={data?.features.length ?? 0}
+      data-geometries={(data?.features ?? []).map((f) => f.geometry.type).join(',')}
       data-selected={data?.features.filter((f) => f.properties?.selected).length ?? 0}
     >
       {children}
@@ -636,5 +637,61 @@ describe('placement cursor', () => {
     fireEvent.click(screen.getByTestId('enter-layer'))
 
     expect(screen.getByTestId('mock-map-root')).toHaveAttribute('data-cursor', 'grab')
+  })
+})
+
+describe('ghost shapes', () => {
+  const twoPoints = [
+    { lat: 1, lng: 1 },
+    { lat: 1, lng: 2 },
+  ]
+  const fourCorners = [
+    { lat: 1, lng: 1 },
+    { lat: 1, lng: 2 },
+    { lat: 2, lng: 2 },
+    { lat: 2, lng: 1 },
+  ]
+
+  it('draws an open ghost as a line so a corridor is not closed into a shape', async () => {
+    await renderMap(
+      <MapView
+        waypoints={[]}
+        onMapClick={() => {}}
+        overlay={{ markers: twoPoints, ghost: twoPoints, ghostClosed: false }}
+      />,
+    )
+
+    const source = screen.getByTestId('mock-source-tool-overlay')
+    expect(source.getAttribute('data-geometries')).toContain('LineString')
+    expect(source.getAttribute('data-geometries')).not.toContain('Polygon')
+  })
+
+  it('still closes a survey box into a polygon', async () => {
+    await renderMap(
+      <MapView
+        waypoints={[]}
+        onMapClick={() => {}}
+        overlay={{ markers: fourCorners, ghost: fourCorners }}
+      />,
+    )
+
+    expect(screen.getByTestId('mock-source-tool-overlay').getAttribute('data-geometries')).toContain(
+      'Polygon',
+    )
+  })
+
+  it('draws a three point corridor as a line rather than a triangle', async () => {
+    const bend = [...twoPoints, { lat: 2, lng: 3 }]
+    await renderMap(
+      <MapView
+        waypoints={[]}
+        onMapClick={() => {}}
+        overlay={{ markers: bend, ghost: bend, ghostClosed: false }}
+      />,
+    )
+
+    const geometries = screen.getByTestId('mock-source-tool-overlay').getAttribute('data-geometries')
+    expect(geometries).toContain('LineString')
+    expect(geometries).not.toContain('Polygon')
   })
 })

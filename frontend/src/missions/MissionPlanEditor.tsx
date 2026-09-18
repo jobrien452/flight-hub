@@ -64,6 +64,9 @@ export function MissionPlanEditor({
   const [spacing, setSpacing] = useState(20)
   const [corridorWidth, setCorridorWidth] = useState(40)
   const [planGenerated, setPlanGenerated] = useState(false)
+  // the plan as it was before the current draft generated anything, so a second
+  // Generate replaces that output instead of stacking another copy on top
+  const [baseWaypoints, setBaseWaypoints] = useState<Waypoint[] | null>(null)
   const [overlay, setOverlay] = useState<ToolOverlay>({ markers: [] })
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
   const [drawerOpen, setDrawerOpen] = useState(false)
@@ -96,15 +99,14 @@ export function MissionPlanEditor({
         setWaypoints(points)
         setPlanParams(params)
       }),
-      rectangle_survey: createRectangleSurveyTool(getSettings, (points, params) => {
-        // points here are just the snapped box outline, not a generated sweep yet
-        setWaypoints(points)
+      rectangle_survey: createRectangleSurveyTool(getSettings, (_points, params) => {
+        // the snapped box is a draft drawn by the overlay, it must not wipe the
+        // waypoints already planned. only Generate turns it into a route
         setPlanParams(params)
         setPlanGenerated(false)
       }),
-      corridor: createCorridorTool(getSettings, (points, params) => {
-        // the traced centre line, the passes either side come from Generate Corridor
-        setWaypoints(points)
+      corridor: createCorridorTool(getSettings, (_points, params) => {
+        // same for the traced centre line, a draft until Generate Corridor runs
         setPlanParams(params)
         setPlanGenerated(false)
       }),
@@ -148,6 +150,8 @@ export function MissionPlanEditor({
     activeTool.onDeactivate()
     tools[id].onActivate()
     setActiveToolId(id)
+    // a new tool starts a new draft, whatever is planned now is what it builds on
+    setBaseWaypoints(null)
     setSelectedIndex(null)
     setDrawerOpen(false)
     setOverlay(tools[id].renderOverlay())
@@ -158,17 +162,24 @@ export function MissionPlanEditor({
   function handleGenerateSurvey() {
     if (planParams?.type !== 'survey') return
     const params = { ...planParams, altitude, spacing }
-    setWaypoints(generateSurveyPlan(params))
     setPlanParams(params)
-    setPlanGenerated(true)
+    appendGenerated(generateSurveyPlan(params))
   }
 
   // same two step shape as the survey, the traced line is not a flight plan yet
   function handleGenerateCorridor() {
     if (planParams?.type !== 'corridor') return
     const params = { ...planParams, altitude, spacing, width: corridorWidth }
-    setWaypoints(generateCorridorPlan(params))
     setPlanParams(params)
+    appendGenerated(generateCorridorPlan(params))
+  }
+
+  // generated points land on the end of the plan rather than over the top of it,
+  // and regenerating swaps out the last lot instead of adding a second copy
+  function appendGenerated(generated: Waypoint[]) {
+    const base = baseWaypoints ?? waypoints
+    setBaseWaypoints(base)
+    setWaypoints([...base, ...generated])
     setPlanGenerated(true)
   }
 

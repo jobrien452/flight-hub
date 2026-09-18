@@ -26,6 +26,9 @@ export interface ToolOverlay {
   // the tool is still expecting clicks that place something, which the map turns
   // into a reticle. false once a click would no longer add to what is being built
   placing?: boolean
+  // whether the ghost closes back on itself. a survey box does, a corridor's
+  // centre line does not and would read as a triangle if it were closed
+  ghostClosed?: boolean
 }
 
 // common shape for anything on the toolbar, new tools just implement this
@@ -242,7 +245,13 @@ export function createCorridorTool(
     },
     // the line as placed, each vertex grabbable so it can be nudged onto the
     // route. a corridor is never finished, another click always extends it
-    renderOverlay: () => ({ markers: path, ghost: path, draggable: true, placing: true }),
+    renderOverlay: () => ({
+      markers: path,
+      ghost: path,
+      ghostClosed: false,
+      draggable: true,
+      placing: true,
+    }),
   }
 }
 

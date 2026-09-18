@@ -560,3 +560,67 @@ describe('tool buttons', () => {
     )
   })
 })
+
+describe('drafts do not eat the plan', () => {
+  it('leaves placed waypoints alone while a corridor is being traced', async () => {
+    const onSubmit = renderEditor()
+    await activateWaypointTool()
+    await userEvent.click(screen.getByText('click A'))
+
+    await userEvent.click(screen.getByRole('button', { name: 'Corridor' }))
+    await userEvent.click(screen.getByText('click B'))
+    await userEvent.click(screen.getByText('click C'))
+    await userEvent.click(screen.getByRole('button', { name: 'Create' }))
+
+    // the traced line is a draft, it does not become the plan until you generate
+    expect(onSubmit.mock.calls[0][0].waypoints).toEqual([{ lat: 20, lng: 10, alt: 50 }])
+  })
+
+  it('adds the generated corridor to what was already planned', async () => {
+    renderEditor()
+    await activateWaypointTool()
+    await userEvent.click(screen.getByText('click A'))
+
+    await userEvent.click(screen.getByRole('button', { name: 'Corridor' }))
+    await userEvent.click(screen.getByText('click B'))
+    await userEvent.click(screen.getByText('click C'))
+    await userEvent.click(screen.getByRole('button', { name: 'Generate Corridor' }))
+
+    // the one placed by hand, plus three passes over a two point line
+    expect(await screen.findByText('7 waypoints')).toBeInTheDocument()
+  })
+
+  it('leaves placed waypoints alone while a survey box is being drawn', async () => {
+    const onSubmit = renderEditor()
+    await activateWaypointTool()
+    await userEvent.click(screen.getByText('click A'))
+
+    await placeBox()
+    await userEvent.click(screen.getByRole('button', { name: 'Create' }))
+
+    expect(onSubmit.mock.calls[0][0].waypoints).toEqual([{ lat: 20, lng: 10, alt: 50 }])
+  })
+
+  it('adds the generated survey to what was already planned', async () => {
+    renderEditor()
+    await activateWaypointTool()
+    await userEvent.click(screen.getByText('click A'))
+
+    await placeBox()
+    await userEvent.click(await screen.findByRole('button', { name: 'Generate Survey' }))
+
+    const count = Number((await screen.findByText(/^\d+ waypoints$/)).textContent?.split(' ')[0])
+    expect(count).toBeGreaterThan(1)
+  })
+
+  it('regenerating replaces the last sweep instead of stacking another one', async () => {
+    renderEditor()
+    await placeBox()
+    await userEvent.click(await screen.findByRole('button', { name: 'Generate Survey' }))
+    const first = (await screen.findByText(/^\d+ waypoints$/)).textContent
+
+    await userEvent.click(screen.getByRole('button', { name: 'Generate Survey' }))
+
+    expect(screen.getByText(/^\d+ waypoints$/).textContent).toBe(first)
+  })
+})
