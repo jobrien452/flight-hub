@@ -105,3 +105,31 @@
 .row-menu-danger {
   color: var(--danger) !important;
 }
+
+/* the edit/remove buttons that sit at the end of a table row */
+.row-action {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.row-action button {
+  font: inherit;
+  font-size: 12px;
+  color: var(--text-dim);
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 3px 8px;
+  margin-left: 6px;
+  cursor: pointer;
+}
+
+.row-action button:hover {
+  color: var(--text);
+  border-color: var(--text-dim);
+}
+
+.fleet-remove:hover,
+.user-remove:hover {
+  border-color: var(--danger);
+}

@@ -15,3 +15,8 @@ export interface UserCreateInput {
   // left off, the account gets an invite link to pick its own
   password?: string
 }
+
+export interface UserUpdateInput {
+  name?: string
+  email?: string
+}

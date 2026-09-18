@@ -1,6 +1,6 @@
 import { http, HttpResponse } from 'msw'
 import { describe, expect, it } from 'vitest'
-import { createUser, listUsers } from './users'
+import { createUser, deleteUser, listUsers, updateUser } from './users'
 import { API_URL } from './client'
 import { fixtureUsers } from '../mocks/handlers'
 import { server } from '../mocks/server'
@@ -50,5 +50,38 @@ describe('createUser', () => {
       role: 'pilot',
       password: 'flies-well',
     })
+  })
+})
+
+describe('updateUser', () => {
+  it('sends only what changed', async () => {
+    let sent: unknown
+    server.use(
+      http.patch(`${API_URL}/users/:id`, async ({ request }) => {
+        sent = await request.json()
+        return HttpResponse.json({ ...fixtureUsers[1], name: 'Pete Pilot Jr' })
+      }),
+    )
+
+    const updated = await updateUser('pilot-1', { name: 'Pete Pilot Jr' }, token)
+
+    expect(sent).toEqual({ name: 'Pete Pilot Jr' })
+    expect(updated.name).toBe('Pete Pilot Jr')
+  })
+})
+
+describe('deleteUser', () => {
+  it('asks for the account to go', async () => {
+    let hit = ''
+    server.use(
+      http.delete(`${API_URL}/users/:id`, ({ params }) => {
+        hit = String(params.id)
+        return new HttpResponse(null, { status: 204 })
+      }),
+    )
+
+    await deleteUser('pilot-1', token)
+
+    expect(hit).toBe('pilot-1')
   })
 })
