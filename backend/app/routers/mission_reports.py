@@ -6,10 +6,10 @@ from pymongo.errors import DuplicateKeyError
 
 from app.ids import to_object_id
 from app.deps import CurrentUser, get_current_user
-from app.fleet import log_flight_time, log_mission_flown, set_drone_status
+from app.fleet import log_flight_time
 from app.mission_access import get_owned_mission
-from app.models.drone import DroneStatus
-from app.models.mission import OPEN_STATUSES, Mission, MissionStatus
+from app.mission_progress import complete_if_everyone_reported
+from app.models.mission import Mission
 from app.models.mission_report import MissionReport, MissionReportStatus
 from app.models.user import Role
 from app.schemas.mission_report import MissionReportCreate, MissionReportOut, MissionReportUpdate
@@ -21,37 +21,13 @@ def _out(report: MissionReport) -> MissionReportOut:
     return MissionReportOut(**report.model_dump(exclude={"id"}), id=str(report.id))
 
 
-async def _complete_if_everyone_reported(mission_id: str) -> None:
-    # a mission is done once every assigned pilot has filed, one pilot finishing
-    # early doesn't finish the job for the rest
-    mission = await Mission.get(PydanticObjectId(mission_id))
-    if mission is None or mission.status not in OPEN_STATUSES:
-        return
-
-    submitted = await MissionReport.find(
-        MissionReport.mission_id == mission_id,
-        MissionReport.status == MissionReportStatus.SUBMITTED,
-    ).to_list()
-    reported = {r.pilot_id for r in submitted}
-    if not set(mission.assigned_pilot_ids).issubset(reported):
-        return
-
-    mission.status = MissionStatus.COMPLETED
-    mission.updated_at = datetime.now(timezone.utc)
-    await mission.save()
-
-    # the job is over, so the aircraft comes back into the pool with one more flight on it
-    await set_drone_status(mission.drone_id, DroneStatus.AVAILABLE)
-    await log_mission_flown(mission.drone_id)
-
-
 async def _on_submitted(mission_id: str, report: MissionReport) -> None:
     mission = await Mission.get(PydanticObjectId(mission_id))
     if mission is not None:
         minutes = report.data.get("duration_minutes")
         if isinstance(minutes, (int, float)):
             await log_flight_time(mission.drone_id, float(minutes))
-    await _complete_if_everyone_reported(mission_id)
+    await complete_if_everyone_reported(mission_id)
 
 
 async def _get_own_report(mission_id: str, report_id: str, current_user: CurrentUser) -> MissionReport:

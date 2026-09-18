@@ -23,3 +23,10 @@ class UserCreate(BaseModel):
     # set one and they can sign in straight away, leave it out and they get an
     # invite link to pick their own
     password: Password | None = None
+
+
+class UserUpdate(BaseModel):
+    # the role is not here on purpose, an account is one thing or the other from
+    # the moment it is made
+    name: UserName | None = None
+    email: EmailStr | None = None
