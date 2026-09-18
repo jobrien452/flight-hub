@@ -477,8 +477,10 @@ describe('MissionPlanEditor publishing', () => {
 
     await userEvent.click(await screen.findByRole('button', { name: 'Publish' }))
 
-    expect(screen.getByText(/needs a name/i)).toBeInTheDocument()
-    expect(screen.getByText(/two waypoints/i)).toBeInTheDocument()
+    expect(screen.getByPlaceholderText('New Mission')).toBeInvalid()
+    expect(screen.getAllByRole('alert').map((el) => el.textContent).join(' ')).toMatch(
+      /waypoint/i,
+    )
     expect(onPublish).not.toHaveBeenCalled()
   })
 
@@ -923,7 +925,7 @@ describe('publishing needs an aircraft', () => {
     )
     await userEvent.click(await screen.findByRole('button', { name: 'Publish' }))
     expect(onPublish).not.toHaveBeenCalled()
-    expect(screen.getByText(/needs an aircraft/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/aircraft/i)).toBeInvalid()
 
     await userEvent.selectOptions(await screen.findByLabelText(/aircraft/i), 'drone-free')
     await userEvent.click(screen.getByRole('button', { name: 'Publish' }))
@@ -1098,9 +1100,9 @@ describe('MissionPlanEditor what a mission needs', () => {
     renderEditor()
     await screen.findByLabelText(/payload/i)
 
-    expect(screen.queryByText(/needs a name/i)).not.toBeInTheDocument()
-    expect(screen.queryByText(/needs an aircraft/i)).not.toBeInTheDocument()
-    expect(screen.queryByText(/two waypoints/i)).not.toBeInTheDocument()
+    expect(screen.queryAllByRole('alert')).toHaveLength(0)
+    expect(screen.getByPlaceholderText('New Mission')).toBeValid()
+    expect(screen.getByLabelText(/aircraft/i)).toBeValid()
   })
 
   it('flags the name when save is pressed without one', async () => {
@@ -1108,8 +1110,8 @@ describe('MissionPlanEditor what a mission needs', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Create' }))
 
-    expect(screen.getByText(/needs a name/i)).toBeInTheDocument()
     expect(screen.getByPlaceholderText('New Mission')).toBeInvalid()
+    expect(screen.getAllByRole('alert').length).toBeGreaterThan(0)
     expect(onSubmit).not.toHaveBeenCalled()
   })
 
@@ -1120,7 +1122,7 @@ describe('MissionPlanEditor what a mission needs', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Create' }))
 
     expect(onSubmit).toHaveBeenCalled()
-    expect(screen.queryByText(/needs an aircraft/i)).not.toBeInTheDocument()
+    expect(screen.getByLabelText(/aircraft/i)).toBeValid()
   })
 
   it('clears the flag once the name is typed', async () => {
@@ -1129,7 +1131,7 @@ describe('MissionPlanEditor what a mission needs', () => {
 
     await userEvent.type(screen.getByPlaceholderText('New Mission'), 'Survey Site A')
 
-    expect(screen.queryByText(/needs a name/i)).not.toBeInTheDocument()
+    expect(screen.getByPlaceholderText('New Mission')).toBeValid()
   })
 
   it('flags the aircraft and the route when publish is pressed', async () => {
@@ -1139,8 +1141,10 @@ describe('MissionPlanEditor what a mission needs', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Publish' }))
 
-    expect(screen.getByText(/needs an aircraft/i)).toBeInTheDocument()
-    expect(screen.getByText(/two waypoints/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/aircraft/i)).toBeInvalid()
+    expect(screen.getAllByRole('alert').map((el) => el.textContent).join(' ')).toMatch(
+      /waypoint/i,
+    )
     expect(onPublish).not.toHaveBeenCalled()
   })
 
@@ -1163,7 +1167,7 @@ describe('MissionPlanEditor what a mission needs', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Publish' }))
 
     expect(onPublish).toHaveBeenCalled()
-    expect(screen.queryByText(/needs an aircraft/i)).not.toBeInTheDocument()
+    expect(screen.getByLabelText(/aircraft/i)).toBeValid()
   })
 })
 
@@ -1184,5 +1188,23 @@ describe('MissionPlanEditor map readout', () => {
     await screen.findByLabelText(/payload/i)
 
     expect(screen.getByTestId('map-stats')).toHaveTextContent('')
+  })
+})
+
+// the one place the wording itself is pinned. reword a warning and this is the
+// only test that should have an opinion about it
+describe('MissionPlanEditor warning wording', () => {
+  it('spells out what each missing thing is', async () => {
+    const onPublish = vi.fn()
+    renderEditor(vi.fn(), { ...fixtureMission, name: '', waypoints: [] }, onPublish)
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Publish' }))
+
+    const said = screen.getAllByRole('alert').map((el) => el.textContent)
+    expect(said).toEqual([
+      'Every mission needs a name',
+      'An aircraft is required for publishing',
+      'A route needs at least two waypoints',
+    ])
   })
 })
