@@ -39,6 +39,10 @@ services:
       - "443:443"
     environment:
       DOMAIN: ${DOMAIN}
+      # an extra name that 301s to DOMAIN, the bare apex when DOMAIN is the www one.
+      # unset it and nginx gets a name nothing can resolve to, so the redirect
+      # server block is still valid config but never matches
+      REDIRECT_DOMAIN: ${REDIRECT_DOMAIN:-no-redirect.invalid}
     volumes:
       - certbot_conf:/etc/letsencrypt
       - certbot_www:/var/www/certbot
