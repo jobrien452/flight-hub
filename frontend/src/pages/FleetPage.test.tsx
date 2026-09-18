@@ -135,6 +135,15 @@ describe('FleetPage', () => {
     expect(screen.getByRole('dialog')).toHaveTextContent(/8 missions/i)
   })
 
+  it('says plainly that removal cannot be undone', async () => {
+    renderPage()
+    await screen.findByText(fixtureDrone.name)
+
+    await userEvent.click(screen.getByRole('button', { name: /remove falcon 1/i }))
+
+    expect(screen.getByRole('dialog')).toHaveTextContent(/cannot be undone/i)
+  })
+
   it('says a drone with no history is gone for good', async () => {
     server.use(
       http.get(`${API_URL}/drones`, () =>
@@ -173,9 +182,9 @@ describe('FleetPage', () => {
     await expect(screen.findByText(/no drones yet/i)).resolves.toBeInTheDocument()
   })
 
-  it('explains why a drone that is flying cannot be removed', async () => {
+  it('reports a removal the server turned down', async () => {
     server.use(
-      http.delete(`${API_URL}/drones/:id`, () => new HttpResponse(null, { status: 409 })),
+      http.delete(`${API_URL}/drones/:id`, () => new HttpResponse(null, { status: 500 })),
     )
     renderPage()
     await screen.findByText(fixtureDrone.name)
@@ -183,7 +192,7 @@ describe('FleetPage', () => {
     await userEvent.click(screen.getByRole('button', { name: /remove falcon 1/i }))
     await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Remove' }))
 
-    expect(await screen.findByText(/out on a mission/i)).toBeInTheDocument()
+    expect(await screen.findByText(/could not remove/i)).toBeInTheDocument()
   })
 
   it('shows a pilot their aircraft without the fleet controls', async () => {

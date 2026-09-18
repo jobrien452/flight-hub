@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -5,10 +6,13 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from app.bookings import bookings_by_drone, holder_of
 from app.deps import CurrentUser, get_current_user, require_admin
 from app.drone_access import get_owned_drone, get_visible_drone
+from app.email_client import send_mission_withdrawn_email
 from app.models.drone import Drone, DroneStatus
 from app.models.mission import Mission, MissionStatus
-from app.models.user import Role
+from app.models.user import Role, User
 from app.schemas.drone import DroneCreate, DroneOut, DroneUpdate
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/drones", tags=["drones"])
 
@@ -71,17 +75,23 @@ async def update_drone(
 UNFLOWN = {MissionStatus.DRAFT, MissionStatus.PUBLISHED}
 
 
+async def _tell_pilots(mission: Mission) -> None:
+    for pilot_id in mission.assigned_pilot_ids:
+        pilot = await User.get(pilot_id)
+        if pilot is None:
+            continue
+        try:
+            send_mission_withdrawn_email(pilot.email, mission.name, str(mission.id), None)
+        except Exception:
+            # the mission is already back in planning, a dead smtp box cannot undo that
+            logger.exception("failed to tell %s about mission %s", pilot.email, mission.id)
+
+
 @router.delete("/{drone_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_drone(
     drone_id: str, current_user: CurrentUser = Depends(require_admin)
 ) -> None:
     drone = await get_owned_drone(drone_id, current_user)
-    # an aircraft that is out on a job should not vanish from under the pilot
-    if drone.status == DroneStatus.IN_FLIGHT:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT, detail="this drone is out on a mission"
-        )
-
     booked = await Mission.find(
         Mission.owner_id == current_user.user_id, Mission.drone_id == drone_id
     ).to_list()
@@ -95,9 +105,14 @@ async def delete_drone(
         mission.drone_id = None
         # nothing flies without an aircraft, so a plan that had one goes back to
         # the drawing board rather than sitting published and unflyable
+        was_published = mission.status == MissionStatus.PUBLISHED
         mission.status = MissionStatus.DRAFT
         mission.updated_at = datetime.now(timezone.utc)
         await mission.save()
+        # a draft was never in anyone's queue, only a published one is a plan
+        # somebody was counting on
+        if was_published:
+            await _tell_pilots(mission)
 
     if flown or drone.missions_flown or drone.flight_hours:
         # kept out of sight so its hours and the missions it flew still add up

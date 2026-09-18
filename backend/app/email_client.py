@@ -63,6 +63,21 @@ def send_mission_unassigned_email(
     )
 
 
+def send_mission_withdrawn_email(
+    to_email: str, mission_name: str, mission_id: str, message: str | None
+) -> None:
+    link = f"{settings.public_base_url}/missions/{mission_id}"
+    _send(
+        to_email,
+        f"{mission_name} is back in planning",
+        _with_note(
+            f"{mission_name} lost the aircraft it was booked on and has gone back to a draft, "
+            f"so it is off your queue for now:\n{link}",
+            message,
+        ),
+    )
+
+
 def send_password_reset_email(to_email: str, token: str) -> None:
     link = f"{settings.public_base_url}/reset-password?token={token}"
     _send(

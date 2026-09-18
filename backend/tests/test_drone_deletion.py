@@ -121,12 +121,88 @@ async def test_a_deleted_drone_can_still_be_read_by_id(client, admin_headers, ad
     assert resp.json()["hidden"] is True
 
 
-async def test_an_aircraft_that_is_out_flying_is_left_alone(
+async def test_an_aircraft_can_be_removed_while_it_is_out_flying(
     client, admin_headers, admin_user: User
 ):
     drone = await a_drone(admin_user, status=DroneStatus.IN_FLIGHT)
+    mission = await a_mission(admin_user, drone, MissionStatus.IN_FLIGHT)
 
     resp = await client.delete(f"/drones/{drone.id}", headers=admin_headers)
 
-    assert resp.status_code == 409
-    assert await Drone.get(drone.id) is not None
+    assert resp.status_code == 204
+    # deleting a row does not land an aircraft, the flight carries on as it was
+    flying = await Mission.get(mission.id)
+    assert flying.status == MissionStatus.IN_FLIGHT
+    assert flying.drone_id == str(drone.id)
+    kept = await Drone.get(drone.id)
+    assert kept.hidden is True
+    assert kept.status == DroneStatus.RETIRED
+
+
+async def test_a_removed_aircraft_never_comes_back_to_available(
+    client, admin_headers, admin_user: User
+):
+    from app.fleet import set_drone_status
+
+    drone = await a_drone(admin_user, status=DroneStatus.IN_FLIGHT)
+    await a_mission(admin_user, drone, MissionStatus.IN_FLIGHT)
+    await client.delete(f"/drones/{drone.id}", headers=admin_headers)
+
+    # the pilot lands and files, which is what would normally free the aircraft
+    await set_drone_status(str(drone.id), DroneStatus.AVAILABLE)
+
+    assert (await Drone.get(drone.id)).status == DroneStatus.RETIRED
+
+
+async def test_the_hours_of_a_flight_still_land_on_a_removed_aircraft(
+    client, admin_headers, admin_user: User
+):
+    from app.fleet import log_flight_time, log_mission_flown
+
+    drone = await a_drone(admin_user, status=DroneStatus.IN_FLIGHT)
+    await a_mission(admin_user, drone, MissionStatus.IN_FLIGHT)
+    await client.delete(f"/drones/{drone.id}", headers=admin_headers)
+
+    await log_flight_time(str(drone.id), 30)
+    await log_mission_flown(str(drone.id))
+
+    kept = await Drone.get(drone.id)
+    assert kept.flight_hours == 0.5
+    assert kept.missions_flown == 1
+
+
+async def test_the_pilots_of_a_pulled_mission_are_told(
+    client, admin_headers, admin_user: User, pilot_user: User, monkeypatch
+):
+    sent = []
+    monkeypatch.setattr(
+        "app.routers.drones.send_mission_withdrawn_email",
+        lambda to, name, mission_id, message: sent.append((to, name)),
+    )
+    drone = await a_drone(admin_user)
+    mission = await a_mission(admin_user, drone, MissionStatus.PUBLISHED)
+    mission.assigned_pilot_ids = [str(pilot_user.id)]
+    await mission.save()
+
+    await client.delete(f"/drones/{drone.id}", headers=admin_headers)
+
+    assert sent == [(pilot_user.email, mission.name)]
+
+
+async def test_nobody_is_emailed_about_a_draft(
+    client, admin_headers, admin_user: User, pilot_user: User, monkeypatch
+):
+    sent = []
+    monkeypatch.setattr(
+        "app.routers.drones.send_mission_withdrawn_email",
+        lambda to, name, mission_id, message: sent.append(to),
+    )
+    drone = await a_drone(admin_user)
+    mission = await a_mission(admin_user, drone, MissionStatus.DRAFT)
+    mission.assigned_pilot_ids = [str(pilot_user.id)]
+    await mission.save()
+
+    await client.delete(f"/drones/{drone.id}", headers=admin_headers)
+
+    # a draft was never in their queue, so there is nothing to withdraw
+    assert sent == []

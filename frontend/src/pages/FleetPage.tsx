@@ -16,9 +16,10 @@ function removalWarning(drone: Drone): string {
     ? `${drone.name} has ${drone.missions_flown} missions and ${drone.flight_hours} hours on it, so it is marked retired and hidden rather than deleted. The missions it flew keep their aircraft.`
     : `${drone.name} has never flown, so it is removed permanently.`
   const booking = drone.booked_on
-    ? ' The mission holding it loses its aircraft and goes back to draft.'
+    ? ' The mission holding it loses its aircraft and goes back to draft, and its pilots are told.'
     : ''
-  return history + booking
+  // there is no restoring one from the fleet page, so say so before they click
+  return `${history}${booking} This cannot be undone.`
 }
 
 export function FleetPage() {
@@ -108,8 +109,7 @@ export function FleetPage() {
       setDrones((current) => (current ?? []).filter((d) => d.id !== removing.id))
       setRemoving(null)
     } catch {
-      // the only refusal the server makes here is an aircraft that is still up
-      setActionError('This drone is out on a mission and cannot be removed yet.')
+      setActionError('Could not remove this drone')
     } finally {
       setWorking(false)
     }

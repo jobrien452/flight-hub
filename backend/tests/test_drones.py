@@ -69,13 +69,13 @@ async def test_an_admin_deletes_a_drone(client, admin_headers, admin_user: User)
     assert (await client.get(f"/drones/{drone.id}", headers=admin_headers)).status_code == 404
 
 
-async def test_a_drone_in_flight_cannot_be_deleted(client, admin_headers, admin_user: User):
+async def test_a_drone_in_flight_can_still_be_deleted(client, admin_headers, admin_user: User):
     drone = await make_drone(admin_user)
     drone.status = DroneStatus.IN_FLIGHT
     await drone.save()
 
     resp = await client.delete(f"/drones/{drone.id}", headers=admin_headers)
-    assert resp.status_code == 409
+    assert resp.status_code == 204
 
 
 async def test_an_admin_attaches_a_drone_to_a_mission(
