@@ -27,6 +27,10 @@ export interface Waypoint {
   alt?: number
   heading?: number
   speed?: number
+  // what the payload is asked to do on arrival, pitch in degrees with down negative
+  gimbal_pitch?: number
+  zoom?: number
+  photo?: boolean
 }
 
 export interface WaypointPlanParams {

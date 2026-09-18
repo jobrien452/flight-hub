@@ -106,3 +106,38 @@ async def test_another_admins_route_reads_as_missing(
 async def test_the_route_needs_auth(client, assigned_mission: Mission):
     resp = await client.get(f"/missions/{assigned_mission.id}/waypoints")
     assert resp.status_code == 403
+
+
+async def test_a_waypoint_carries_what_the_payload_should_do(
+    client, admin_headers, assigned_mission: Mission
+):
+    resp = await client.patch(
+        f"/missions/{assigned_mission.id}",
+        json={
+            "waypoints": [
+                {"lat": 1.0, "lng": 2.0, "alt": 30, "gimbal_pitch": -45, "zoom": 2, "photo": True}
+            ]
+        },
+        headers=admin_headers,
+    )
+
+    assert resp.status_code == 200
+    point = resp.json()["waypoints"][0]
+    assert point["gimbal_pitch"] == -45
+    assert point["zoom"] == 2
+    assert point["photo"] is True
+
+
+async def test_a_waypoint_asks_for_nothing_by_default(
+    client, admin_headers, assigned_mission: Mission
+):
+    resp = await client.patch(
+        f"/missions/{assigned_mission.id}",
+        json={"waypoints": [{"lat": 1.0, "lng": 2.0, "alt": 30}]},
+        headers=admin_headers,
+    )
+
+    point = resp.json()["waypoints"][0]
+    assert point["gimbal_pitch"] is None
+    assert point["zoom"] is None
+    assert point["photo"] is False

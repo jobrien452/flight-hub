@@ -363,6 +363,32 @@ describe('MissionPlanEditor select tool', () => {
     expect(onSubmit.mock.calls[0][0].waypoints[1]).toMatchObject({ heading: 90, speed: 4 })
   })
 
+  it('sets what the payload does at a waypoint', async () => {
+    const onSubmit = renderEditor()
+    await placeTwoAndSelect('grab second')
+    await userEvent.click(screen.getByRole('button', { name: 'Edit details' }))
+
+    const drawer = screen.getByRole('complementary', { name: 'Waypoint 2 details' })
+    await userEvent.type(within(drawer).getByLabelText('Gimbal pitch (deg)'), '-90')
+    await userEvent.type(within(drawer).getByLabelText('Zoom (x)'), '4')
+    await userEvent.click(within(drawer).getByLabelText('Take a photo here'))
+    await userEvent.click(screen.getByRole('button', { name: 'Create' }))
+
+    expect(onSubmit.mock.calls[0][0].waypoints[1]).toMatchObject({
+      gimbal_pitch: -90,
+      zoom: 4,
+      photo: true,
+    })
+  })
+
+  it('asks the payload for nothing until it is told to', async () => {
+    const onSubmit = renderEditor()
+    await placeTwoAndSelect('grab second')
+    await userEvent.click(screen.getByRole('button', { name: 'Create' }))
+
+    expect(onSubmit.mock.calls[0][0].waypoints[1].photo).toBeFalsy()
+  })
+
   it('closes the drawer', async () => {
     renderEditor()
     await placeTwoAndSelect('grab second')

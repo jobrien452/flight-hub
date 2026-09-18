@@ -32,6 +32,10 @@ class Waypoint(BaseModel):
     alt: float = 0
     heading: float | None = None
     speed: float | None = None
+    # what the payload does on arrival, pitch in degrees with down negative
+    gimbal_pitch: float | None = None
+    zoom: float | None = None
+    photo: bool = False
 
 
 class Payload(BaseModel):

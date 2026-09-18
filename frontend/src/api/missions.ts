@@ -1,4 +1,4 @@
-import { apiFetch } from './client'
+import { API_URL, ApiError, apiFetch } from './client'
 import type {
   Mission,
   MissionCreateInput,
@@ -10,6 +10,14 @@ import type {
 // summaries only, the route is fetched per mission by getMissionWaypoints
 export async function listMissions(token: string): Promise<MissionSummary[]> {
   return apiFetch<MissionSummary[]>('/missions', token)
+}
+
+export async function exportMissionPlan(id: string, token: string): Promise<string> {
+  const res = await fetch(`${API_URL}/missions/${id}/export`, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  if (!res.ok) throw new ApiError(res.status, await res.text())
+  return res.text()
 }
 
 export async function getMissionWaypoints(id: string, token: string): Promise<Waypoint[]> {

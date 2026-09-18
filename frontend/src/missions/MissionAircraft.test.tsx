@@ -88,6 +88,24 @@ describe('MissionAircraft', () => {
     expect(screen.queryByText('Max flight time')).not.toBeInTheDocument()
   })
 
+  it('shows where the aircraft puts its video', async () => {
+    server.use(
+      http.get(`${API_URL}/drones/:id`, () =>
+        HttpResponse.json({ ...fixtureDrone, stream_url: 'rtsp://192.168.35.1:8554/eo' }),
+      ),
+    )
+    renderPanel()
+
+    expect(await screen.findByText('rtsp://192.168.35.1:8554/eo')).toBeInTheDocument()
+  })
+
+  it('leaves the stream line out when there is none', async () => {
+    renderPanel()
+
+    await screen.findByText(fixtureDrone.name)
+    expect(screen.queryByText('Video')).not.toBeInTheDocument()
+  })
+
   it('says when nothing is booked yet', async () => {
     renderPanel({ drone_id: null, payload: null })
 

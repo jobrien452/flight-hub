@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 
 from beanie import PydanticObjectId
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import PlainTextResponse
 
 from app.bookings import holder_of
 from app.deps import CurrentUser, get_current_user, require_admin
@@ -11,6 +12,7 @@ from app.email_client import send_mission_assigned_email, send_mission_unassigne
 from app.fleet import set_drone_status
 from app.models.drone import DroneStatus
 from app.mission_access import get_owned_mission
+from app.mission_export import to_qgc_wpl
 from app.models.mission import (
     ACKNOWLEDGEABLE,
     STARTABLE,
@@ -90,6 +92,25 @@ async def get_mission_waypoints(
 ) -> list[Waypoint]:
     mission = await get_owned_mission(mission_id, current_user)
     return mission.waypoints
+
+
+# the plan in the format the aircraft's own tooling reads, so a route planned
+# here can be loaded into mission planner or pushed over mavlink as it is
+@router.get("/{mission_id}/export", response_class=PlainTextResponse)
+async def export_mission(
+    mission_id: str, current_user: CurrentUser = Depends(get_current_user)
+) -> PlainTextResponse:
+    mission = await get_owned_mission(mission_id, current_user)
+    if not mission.waypoints:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail="this mission has no route to export"
+        )
+
+    filename = "".join(c if c.isalnum() or c in "-_" else "-" for c in mission.name) or "mission"
+    return PlainTextResponse(
+        to_qgc_wpl(mission.waypoints),
+        headers={"Content-Disposition": f'attachment; filename="{filename}.waypoints"'},
+    )
 
 
 @router.post("", response_model=MissionOut, status_code=status.HTTP_201_CREATED)

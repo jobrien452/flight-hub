@@ -40,6 +40,7 @@ export const fixtureDrone: Drone = {
   name: 'Falcon 1',
   model: 'Matrice 350 RTK',
   serial: 'SN-001',
+  stream_url: '',
   status: 'available',
   owner_id: 'admin-1',
   flight_hours: 12.5,
@@ -168,6 +169,15 @@ export const handlers = [
   http.delete(`${API_URL}/drones/:id`, () => new HttpResponse(null, { status: 204 })),
 
   http.get(`${API_URL}/missions`, () => HttpResponse.json([fixtureMissionSummary])),
+
+  http.get(`${API_URL}/missions/:id/export`, ({ params }) => {
+    if (params.id !== fixtureMission.id) return new HttpResponse(null, { status: 404 })
+    return HttpResponse.text(
+      ['QGC WPL 110', ['0', '1', '0', '16', '0', '0', '0', '0', '1', '2', '10', '1'].join('\t')].join(
+        '\n',
+      ),
+    )
+  }),
 
   http.get(`${API_URL}/missions/:id/waypoints`, ({ params }) => {
     if (params.id !== fixtureMission.id) return new HttpResponse(null, { status: 404 })

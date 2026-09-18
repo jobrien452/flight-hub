@@ -6,6 +6,7 @@ import { useAuth } from '../auth/useAuth'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { MapView } from '../map/MapView'
 import { MissionAircraft } from '../missions/MissionAircraft'
+import { downloadPlan } from '../missions/downloadPlan'
 import { MissionPlanEditor, type MissionPlanEditorValue } from '../missions/MissionPlanEditor'
 import { PilotMissionPanel } from '../missions/PilotMissionPanel'
 import { PlanSummary } from '../missions/PlanSummary'
@@ -28,6 +29,7 @@ export function MissionDetailPage() {
   const [confirmingEdit, setConfirmingEdit] = useState(false)
   const [publishing, setPublishing] = useState(false)
   const [offerAssignment, setOfferAssignment] = useState(false)
+  const [exporting, setExporting] = useState(false)
 
   const [pilots, setPilots] = useState<User[]>([])
 
@@ -106,6 +108,19 @@ export function MissionDetailPage() {
     }
   }
 
+  async function handleExport() {
+    if (!session || !mission) return
+    setExporting(true)
+    setSaveError(null)
+    try {
+      await downloadPlan(mission.id, mission.name, session.token)
+    } catch {
+      setSaveError('Could not export this plan')
+    } finally {
+      setExporting(false)
+    }
+  }
+
   function handleEditClick() {
     // editing a mission pilots are already flying against deserves a second look
     if (mission?.assigned_pilot_ids.length) {
@@ -153,29 +168,40 @@ export function MissionDetailPage() {
     <div>
       <div className="page-header">
         <h1>{mission.name}</h1>
-        {session?.role === 'admin' && (
-          <div className="header-actions">
-            <button type="button" className="button" onClick={handleEditClick}>
-              Edit
-            </button>
-            {isDraft && (
-              <button
-                type="button"
-                className="button button-secondary"
-                disabled={mission.waypoints.length === 0 || publishing}
-                onClick={handlePublishFromView}
-              >
-                {publishing ? 'Publishing...' : 'Publish'}
+        <div className="header-actions">
+          {/* the plan in the format the aircraft reads, whoever is looking at it */}
+          <button
+            type="button"
+            className="button button-secondary"
+            disabled={mission.waypoints.length === 0 || exporting}
+            onClick={handleExport}
+          >
+            {exporting ? 'Exporting...' : 'Export .waypoints'}
+          </button>
+          {session?.role === 'admin' && (
+            <>
+              <button type="button" className="button" onClick={handleEditClick}>
+                Edit
               </button>
-            )}
-            {/* nothing to plan against until the mission is published */}
-            {!isDraft && (
-              <Link className="button button-secondary" to={`/missions/${mission.id}/plan`}>
-                Plan
-              </Link>
-            )}
-          </div>
-        )}
+              {isDraft && (
+                <button
+                  type="button"
+                  className="button button-secondary"
+                  disabled={mission.waypoints.length === 0 || publishing}
+                  onClick={handlePublishFromView}
+                >
+                  {publishing ? 'Publishing...' : 'Publish'}
+                </button>
+              )}
+              {/* nothing to plan against until the mission is published */}
+              {!isDraft && (
+                <Link className="button button-secondary" to={`/missions/${mission.id}/plan`}>
+                  Plan
+                </Link>
+              )}
+            </>
+          )}
+        </div>
       </div>
       {saveError && <p className="auth-error">{saveError}</p>}
       <p className="text-dim mono">{mission.status}</p>

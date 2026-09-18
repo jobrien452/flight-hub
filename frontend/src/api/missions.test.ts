@@ -5,6 +5,7 @@ import {
   createMission,
   deleteMission,
   getMission,
+  exportMissionPlan,
   getMissionWaypoints,
   listMissions,
   publishMission,
@@ -108,5 +109,17 @@ describe('getMissionWaypoints', () => {
 
   it('throws for a mission that is not there', async () => {
     await expect(getMissionWaypoints('nope', token)).rejects.toThrow()
+  })
+})
+
+describe('exportMissionPlan', () => {
+  it('brings the plan back as a waypoint file', async () => {
+    const text = await exportMissionPlan(fixtureMission.id, token)
+
+    expect(text.startsWith('QGC WPL 110')).toBe(true)
+  })
+
+  it('throws for a mission with nothing to export', async () => {
+    await expect(exportMissionPlan('nope', token)).rejects.toThrow()
   })
 })

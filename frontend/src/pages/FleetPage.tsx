@@ -17,6 +17,7 @@ export function FleetPage() {
   const [name, setName] = useState('')
   const [model, setModel] = useState('')
   const [serial, setSerial] = useState('')
+  const [streamUrl, setStreamUrl] = useState('')
   const [removing, setRemoving] = useState<Drone | null>(null)
   const [working, setWorking] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
@@ -35,6 +36,7 @@ export function FleetPage() {
     setName('')
     setModel('')
     setSerial('')
+    setStreamUrl('')
     setActionError(null)
   }
 
@@ -43,7 +45,10 @@ export function FleetPage() {
     setWorking(true)
     setActionError(null)
     try {
-      const drone = await createDrone({ name: name.trim(), model, serial }, session.token)
+      const drone = await createDrone(
+        { name: name.trim(), model, serial, stream_url: streamUrl.trim() },
+        session.token,
+      )
       setDrones((current) => [...(current ?? []), drone])
       closeAdd()
     } catch {
@@ -186,6 +191,14 @@ export function FleetPage() {
               <label>
                 Serial
                 <input value={serial} onChange={(e) => setSerial(e.target.value)} />
+              </label>
+              <label>
+                Video stream
+                <input
+                  placeholder="rtsp://192.168.35.1:8554/eo"
+                  value={streamUrl}
+                  onChange={(e) => setStreamUrl(e.target.value)}
+                />
               </label>
             </div>
           }

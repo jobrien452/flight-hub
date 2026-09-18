@@ -9,6 +9,7 @@ class DroneCreate(BaseModel):
     name: str
     model: str = ""
     serial: str = ""
+    stream_url: str = ""
     status: DroneStatus = DroneStatus.AVAILABLE
 
 
@@ -18,6 +19,7 @@ class DroneUpdate(BaseModel):
     name: str | None = None
     model: str | None = None
     serial: str | None = None
+    stream_url: str | None = None
     status: DroneStatus | None = None
 
 
@@ -26,6 +28,7 @@ class DroneOut(BaseModel):
     name: str
     model: str
     serial: str
+    stream_url: str = ""
     status: DroneStatus
     owner_id: str
     flight_hours: float

@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
@@ -112,6 +112,31 @@ describe('MissionDetailPage', () => {
     expect(screen.getByText('Distance')).toBeInTheDocument()
     expect(screen.getByText('Est. flight time')).toBeInTheDocument()
     expect(screen.getByText('Altitude')).toBeInTheDocument()
+  })
+
+  it('downloads the plan as a waypoint file', async () => {
+    // jsdom has no object urls, so the download needs both ends stubbed in
+    const created = vi.fn(() => 'blob:plan')
+    URL.createObjectURL = created
+    URL.revokeObjectURL = vi.fn()
+    const clicked = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
+    renderPage(adminSession)
+
+    try {
+      await userEvent.click(await screen.findByRole('button', { name: /export/i }))
+
+      await waitFor(() => expect(created).toHaveBeenCalled())
+      expect(clicked).toHaveBeenCalled()
+    } finally {
+      clicked.mockRestore()
+    }
+  })
+
+  it('offers the export to the pilot flying it as well', async () => {
+    serveMission({ status: 'published' })
+    renderPage(pilotSession)
+
+    expect(await screen.findByRole('button', { name: /export/i })).toBeInTheDocument()
   })
 
   it('shows the aircraft booked and the payload it carries', async () => {

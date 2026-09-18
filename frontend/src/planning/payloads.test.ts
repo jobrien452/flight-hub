@@ -48,6 +48,12 @@ describe('payload catalogue', () => {
     )
   })
 
+  it('carries the gopro flyby integrate over usb', () => {
+    const gopro = findPayload('gopro-hero-12')
+    expect(gopro?.camera).toContain('GoPro')
+    expect(gopro?.image_width_px).toBe(5568)
+  })
+
   it('looks an entry up by id', () => {
     expect(findPayload('sony-ilx-lr1-24')?.camera).toBe('Sony ILX-LR1')
     expect(findPayload('nope')).toBeUndefined()

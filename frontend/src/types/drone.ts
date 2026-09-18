@@ -7,6 +7,8 @@ export interface Drone {
   name: string
   model: string
   serial: string
+  // where the aircraft puts its video, the jetson serves rtsp on the airframe
+  stream_url: string
   status: DroneStatus
   owner_id: string
   flight_hours: number
@@ -21,6 +23,7 @@ export interface DroneCreateInput {
   name: string
   model?: string
   serial?: string
+  stream_url?: string
   status?: DroneStatus
 }
 
@@ -28,5 +31,6 @@ export interface DroneUpdateInput {
   name?: string
   model?: string
   serial?: string
+  stream_url?: string
   status?: DroneStatus
 }

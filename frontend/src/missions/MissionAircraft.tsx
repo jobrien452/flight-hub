@@ -64,6 +64,12 @@ export function MissionAircraft({ mission }: MissionAircraftProps) {
                 <dd className="mono">{drone.flight_hours} h</dd>
                 <dt>Missions flown</dt>
                 <dd className="mono">{drone.missions_flown}</dd>
+                {drone.stream_url && (
+                  <>
+                    <dt>Video</dt>
+                    <dd className="mono">{drone.stream_url}</dd>
+                  </>
+                )}
                 {specs && (
                   <>
                     <dt>Max flight time</dt>

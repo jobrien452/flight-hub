@@ -70,6 +70,20 @@ export const PAYLOADS: CataloguePayload[] = [
     focal_length_mm: 35,
   },
   {
+    // flyby drive this one over usb from the jetson. the linear lens is the one
+    // worth mapping with, the wide lens distorts too much to stitch
+    id: 'gopro-hero-12',
+    name: 'GoPro Hero 12 Black',
+    camera: 'GoPro Hero 12 Black',
+    lens: 'Linear, 19mm equivalent',
+    gimbal: 'None, fixed mount',
+    sensor_width_mm: 7.03,
+    sensor_height_mm: 5.27,
+    image_width_px: 5568,
+    image_height_px: 4176,
+    focal_length_mm: 3.85,
+  },
+  {
     id: 'mavic-3e-wide',
     name: 'DJI Mavic 3E wide',
     camera: 'DJI Mavic 3E',

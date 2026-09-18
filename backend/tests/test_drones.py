@@ -211,3 +211,34 @@ async def test_a_report_without_a_duration_still_counts_the_mission(
     resp = await client.get(f"/drones/{drone.id}", headers=admin_headers)
     assert resp.json()["flight_hours"] == 0
     assert resp.json()["missions_flown"] == 1
+
+
+async def test_a_drone_carries_its_video_stream(client, admin_headers):
+    resp = await client.post(
+        "/drones",
+        json={"name": "Falcon 3", "model": "F-11S", "stream_url": "rtsp://192.168.35.1:8554/eo"},
+        headers=admin_headers,
+    )
+
+    assert resp.status_code == 201
+    assert resp.json()["stream_url"] == "rtsp://192.168.35.1:8554/eo"
+
+
+async def test_the_stream_can_be_set_later(client, admin_headers):
+    created = await client.post("/drones", json={"name": "Falcon 4"}, headers=admin_headers)
+    drone_id = created.json()["id"]
+
+    resp = await client.patch(
+        f"/drones/{drone_id}",
+        json={"stream_url": "rtsp://192.168.35.1:8554/ir"},
+        headers=admin_headers,
+    )
+
+    assert resp.status_code == 200
+    assert resp.json()["stream_url"] == "rtsp://192.168.35.1:8554/ir"
+
+
+async def test_a_drone_without_a_stream_says_nothing(client, admin_headers):
+    resp = await client.post("/drones", json={"name": "Falcon 5"}, headers=admin_headers)
+
+    assert resp.json()["stream_url"] == ""

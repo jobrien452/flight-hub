@@ -18,6 +18,8 @@ class Drone(Document):
     name: str
     model: str = ""
     serial: str = ""
+    # where the aircraft puts its video, the jetson serves rtsp on the airframe
+    stream_url: str = ""
     status: DroneStatus = DroneStatus.AVAILABLE
     owner_id: str  # the admin whose fleet this belongs to
     # the digital twin's running totals, both fed by submitted pilot reports

@@ -79,6 +79,36 @@ export function WaypointDrawer({
         />
       </label>
 
+      <label>
+        Gimbal pitch (deg)
+        <input
+          type="number"
+          placeholder="level"
+          value={waypoint.gimbal_pitch ?? ''}
+          onChange={(e) => onChange({ gimbal_pitch: toNumber(e.target.value) })}
+        />
+      </label>
+
+      <label>
+        Zoom (x)
+        <input
+          type="number"
+          step="0.1"
+          placeholder="none"
+          value={waypoint.zoom ?? ''}
+          onChange={(e) => onChange({ zoom: toNumber(e.target.value) })}
+        />
+      </label>
+
+      <label className="waypoint-drawer-check">
+        <input
+          type="checkbox"
+          checked={waypoint.photo ?? false}
+          onChange={(e) => onChange({ photo: e.target.checked })}
+        />
+        Take a photo here
+      </label>
+
       <button type="button" className="waypoint-drawer-delete" onClick={onDelete}>
         Delete waypoint
       </button>

@@ -72,6 +72,19 @@ describe('FleetPage', () => {
     expect(list!.querySelector('option[value="F-11S"]')).not.toBeNull()
   })
 
+  it('takes a video stream url with a new drone', async () => {
+    renderPage()
+    await screen.findByText(fixtureDrone.name)
+
+    await userEvent.click(screen.getByRole('button', { name: /add drone/i }))
+    const dialog = within(screen.getByRole('dialog'))
+    await userEvent.type(dialog.getByLabelText(/name/i), 'Falcon 2')
+    await userEvent.type(dialog.getByLabelText(/stream/i), 'rtsp://192.168.35.1:8554/eo')
+    await userEvent.click(dialog.getByRole('button', { name: /add drone/i }))
+
+    expect(await screen.findByText('Falcon 2')).toBeInTheDocument()
+  })
+
   it('takes a drone out of rotation', async () => {
     renderPage()
     await screen.findByText(fixtureDrone.name)
