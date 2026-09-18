@@ -109,13 +109,17 @@
   color: var(--danger);
 }
 
-/* the edit/remove buttons that sit at the end of a table row */
+/* every table right-aligns this last cell, whatever it decides to put in it */
 .row-action {
   text-align: right;
   white-space: nowrap;
 }
 
-.row-action button {
+/* the fleet and users tables put their actions inline in that cell. named by
+   table on purpose: the missions table puts a dropdown there instead, and an
+   unscoped rule reaches inside it and styles the menu items too */
+.fleet-table .row-action button,
+.users-table .row-action button {
   font: inherit;
   font-size: 12px;
   color: var(--text-dim);
@@ -127,7 +131,8 @@
   cursor: pointer;
 }
 
-.row-action button:hover {
+.fleet-table .row-action button:hover,
+.users-table .row-action button:hover {
   color: var(--text);
   border-color: var(--text-dim);
 }
