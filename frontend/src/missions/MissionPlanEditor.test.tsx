@@ -862,3 +862,91 @@ describe('publishing needs an aircraft', () => {
     expect(onSubmit).toHaveBeenCalled()
   })
 })
+
+describe('the payload drives the sweep', () => {
+  async function pickPayloadAndSurvey() {
+    await userEvent.selectOptions(await screen.findByLabelText(/payload/i), 'sony-ilx-lr1-24')
+    await placeBox()
+  }
+
+  it('asks for overlap rather than raw spacing once a payload is on', async () => {
+    renderEditor()
+    await userEvent.selectOptions(await screen.findByLabelText(/payload/i), 'sony-ilx-lr1-24')
+    await userEvent.click(screen.getByRole('button', { name: 'Rectangle Survey' }))
+
+    expect(screen.getByLabelText(/side overlap/i)).toBeInTheDocument()
+    expect(screen.queryByLabelText(/line spacing/i)).not.toBeInTheDocument()
+  })
+
+  it('falls back to raw spacing with no payload to compute from', async () => {
+    renderEditor()
+    await userEvent.click(screen.getByRole('button', { name: 'Rectangle Survey' }))
+
+    expect(screen.getByLabelText(/line spacing/i)).toBeInTheDocument()
+    expect(screen.queryByLabelText(/side overlap/i)).not.toBeInTheDocument()
+  })
+
+  it('shows the spacing the overlap works out to', async () => {
+    renderEditor()
+    await userEvent.selectOptions(await screen.findByLabelText(/payload/i), 'sony-ilx-lr1-24')
+
+    // 50m on the 24mm frames 74.6m of ground, 70% overlap leaves 22m between passes
+    expect(await screen.findByText(/22 m/)).toBeInTheDocument()
+  })
+
+  it('flies tighter passes when the overlap goes up', async () => {
+    renderEditor()
+    await pickPayloadAndSurvey()
+    await userEvent.click(await screen.findByRole('button', { name: 'Generate Survey' }))
+    const looser = Number((await screen.findByText(/^\d+ waypoints$/)).textContent?.split(' ')[0])
+
+    const overlap = screen.getByLabelText(/side overlap/i)
+    await userEvent.clear(overlap)
+    await userEvent.type(overlap, '85')
+    await userEvent.click(await screen.findByRole('button', { name: 'Generate Survey' }))
+
+    const tighter = Number(screen.getByText(/^\d+ waypoints$/).textContent?.split(' ')[0])
+    expect(tighter).toBeGreaterThan(looser)
+  })
+
+  it('flies wider passes when the aircraft climbs, same overlap', async () => {
+    renderEditor()
+    await pickPayloadAndSurvey()
+    await userEvent.click(await screen.findByRole('button', { name: 'Generate Survey' }))
+    const low = Number((await screen.findByText(/^\d+ waypoints$/)).textContent?.split(' ')[0])
+
+    const altitude = screen.getByLabelText(/altitude/i)
+    await userEvent.clear(altitude)
+    await userEvent.type(altitude, '150')
+    await userEvent.click(await screen.findByRole('button', { name: 'Generate Survey' }))
+
+    const high = Number(screen.getByText(/^\d+ waypoints$/).textContent?.split(' ')[0])
+    expect(high).toBeLessThan(low)
+  })
+})
+
+describe('a booked aircraft is off the table', () => {
+  const free = { ...fixtureDrone, id: 'drone-free', name: 'Falcon 1', booked_on: null }
+  const taken = { ...fixtureDrone, id: 'drone-taken', name: 'Falcon 2', booked_on: 'mission-9' }
+
+  function serveDrones(drones: unknown[]) {
+    server.use(http.get(`${API_URL}/drones`, () => HttpResponse.json(drones)))
+  }
+
+  it('leaves out an aircraft another mission is holding', async () => {
+    serveDrones([free, taken])
+    renderEditor()
+
+    const picker = await screen.findByLabelText(/aircraft/i)
+    expect(within(picker).getByRole('option', { name: /Falcon 1/ })).toBeInTheDocument()
+    expect(within(picker).queryByRole('option', { name: /Falcon 2/ })).not.toBeInTheDocument()
+  })
+
+  it('keeps the one this mission is holding', async () => {
+    serveDrones([free, { ...taken, booked_on: fixtureMission.id }])
+    renderEditor(vi.fn(), { ...fixtureMission, drone_id: 'drone-taken' })
+
+    const picker = await screen.findByLabelText(/aircraft/i)
+    expect(within(picker).getByRole('option', { name: /Falcon 2/ })).toBeInTheDocument()
+  })
+})

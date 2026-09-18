@@ -30,5 +30,7 @@ class DroneOut(BaseModel):
     owner_id: str
     flight_hours: float
     missions_flown: int
+    # the mission holding this aircraft, so the ui can keep it out of other plans
+    booked_on: str | None = None
     created_at: datetime
     updated_at: datetime

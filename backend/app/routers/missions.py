@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from beanie import PydanticObjectId
 from fastapi import APIRouter, Depends, HTTPException, status
 
+from app.bookings import holder_of
 from app.deps import CurrentUser, get_current_user, require_admin
 from app.drone_access import get_owned_drone
 from app.email_client import send_mission_assigned_email, send_mission_unassigned_email
@@ -117,6 +118,13 @@ async def update_mission(
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail=f"{drone.name} is {drone.status.value}, only an available drone can be booked",
+            )
+        # one aircraft, one mission. a booking is exclusive until the flight is done
+        holder = await holder_of(str(drone.id), current_user.user_id, ignoring=mission_id)
+        if holder is not None:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"{drone.name} is already booked on {holder.name}",
             )
     for field, value in updates.items():
         setattr(mission, field, value)

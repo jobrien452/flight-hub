@@ -11,6 +11,8 @@ export interface Drone {
   owner_id: string
   flight_hours: number
   missions_flown: number
+  // the mission holding this aircraft, a booking is exclusive until it is flown
+  booked_on: string | null
   created_at: string
   updated_at: string
 }

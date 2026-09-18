@@ -3,7 +3,13 @@ import { listDrones } from '../api/drones'
 import { useAuth } from '../auth/useAuth'
 import { MapView } from '../map/MapView'
 import { generateCorridorPlan, generateSurveyPlan } from '../planning/flightPlanGenerators'
-import { PAYLOADS, findPayload, footprintWidthM, gsdCmPerPixel } from '../planning/payloads'
+import {
+  PAYLOADS,
+  findPayload,
+  footprintWidthM,
+  gsdCmPerPixel,
+  lineSpacingM,
+} from '../planning/payloads'
 import {
   createCorridorTool,
   createRectangleSurveyTool,
@@ -86,6 +92,7 @@ export function MissionPlanEditor({
   const [activeToolId, setActiveToolId] = useState<ToolId>('select')
   const [altitude, setAltitude] = useState(50)
   const [spacing, setSpacing] = useState(20)
+  const [sideOverlap, setSideOverlap] = useState(70)
   const [corridorWidth, setCorridorWidth] = useState(40)
   const [planGenerated, setPlanGenerated] = useState(false)
   const [draftParams, setDraftParams] = useState<DraftParams | null>(null)
@@ -194,7 +201,7 @@ export function MissionPlanEditor({
   // are set right now so tweaking settings and regenerating works
   function handleGenerateSurvey() {
     if (draftParams?.type !== 'survey') return
-    const params = { ...draftParams, altitude, spacing }
+    const params = { ...draftParams, altitude, spacing: effectiveSpacing }
     setDraftParams(params)
     setPlanParams(params)
     appendGenerated(generateSurveyPlan(params))
@@ -203,7 +210,7 @@ export function MissionPlanEditor({
   // same two step shape as the survey, the traced line is not a flight plan yet
   function handleGenerateCorridor() {
     if (draftParams?.type !== 'corridor') return
-    const params = { ...draftParams, altitude, spacing, width: corridorWidth }
+    const params = { ...draftParams, altitude, spacing: effectiveSpacing, width: corridorWidth }
     setDraftParams(params)
     setPlanParams(params)
     appendGenerated(generateCorridorPlan(params))
@@ -254,9 +261,17 @@ export function MissionPlanEditor({
   // saving is deliberately not gated, a draft may sit half finished
   const readyToPublish = name.trim().length > 0 && waypoints.length > 0 && droneId !== ''
   const payload = findPayload(payloadId)
-  // only a free aircraft can be booked, but whatever is already on the mission
-  // stays listed so the current booking is always something the picker can show
-  const bookable = drones.filter((d) => d.status === 'available' || d.id === droneId)
+  // with a sensor on board the spacing follows from the overlap, which is how a
+  // survey is actually specified. without one there is nothing to compute from
+  const effectiveSpacing = payload ? lineSpacingM(payload, altitude, sideOverlap) : spacing
+  // a booking is exclusive, so an aircraft another mission is holding is not on
+  // offer. whatever this mission already has stays listed either way, otherwise
+  // the picker could not show its own current booking
+  const bookable = drones.filter(
+    (d) =>
+      d.id === droneId ||
+      (d.status === 'available' && (!d.booked_on || d.booked_on === mission?.id)),
+  )
   const canPublish = onPublish && mission && mission.status === 'draft'
 
   // the generate step belongs to the tool that drew the draft, so it is offered
@@ -323,6 +338,8 @@ export function MissionPlanEditor({
               <dd className="mono">{gsdCmPerPixel(payload, altitude).toFixed(2)} cm/px</dd>
               <dt>Frame width</dt>
               <dd className="mono">{footprintWidthM(payload, altitude).toFixed(0)} m</dd>
+              <dt>Line spacing</dt>
+              <dd className="mono">{effectiveSpacing.toFixed(0)} m</dd>
             </dl>
           )}
         </fieldset>
@@ -360,16 +377,28 @@ export function MissionPlanEditor({
               />
             </label>
           )}
-          {(activeToolId === 'rectangle_survey' || activeToolId === 'corridor') && (
-            <label>
-              Line spacing (m)
-              <input
-                type="number"
-                value={spacing}
-                onChange={(e) => updateSetting(setSpacing, e.target.value)}
-              />
-            </label>
-          )}
+          {(activeToolId === 'rectangle_survey' || activeToolId === 'corridor') &&
+            (payload ? (
+              <label>
+                Side overlap (%)
+                <input
+                  type="number"
+                  min="0"
+                  max="99"
+                  value={sideOverlap}
+                  onChange={(e) => updateSetting(setSideOverlap, e.target.value)}
+                />
+              </label>
+            ) : (
+              <label>
+                Line spacing (m)
+                <input
+                  type="number"
+                  value={spacing}
+                  onChange={(e) => updateSetting(setSpacing, e.target.value)}
+                />
+              </label>
+            ))}
           {activeToolId === 'corridor' && (
             <label>
               Corridor width (m)

@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { PAYLOADS, findPayload, footprintWidthM, gsdCmPerPixel } from './payloads'
+import {
+  PAYLOADS,
+  findPayload,
+  footprintWidthM,
+  gsdCmPerPixel,
+  lineSpacingM,
+} from './payloads'
 
 const lr1 = PAYLOADS.find((p) => p.id === 'sony-ilx-lr1-24')!
 
@@ -61,5 +67,32 @@ describe('ground footprint', () => {
 
   it('refuses to divide by a missing lens', () => {
     expect(footprintWidthM({ ...lr1, focal_length_mm: 0 }, 100)).toBe(0)
+  })
+})
+
+describe('line spacing from overlap', () => {
+  it('leaves a full frame between passes at no overlap', () => {
+    expect(lineSpacingM(lr1, 100, 0)).toBeCloseTo(footprintWidthM(lr1, 100), 4)
+  })
+
+  it('halves the spacing at fifty percent overlap', () => {
+    expect(lineSpacingM(lr1, 100, 50)).toBeCloseTo(footprintWidthM(lr1, 100) / 2, 4)
+  })
+
+  it('tightens the passes as the overlap goes up', () => {
+    expect(lineSpacingM(lr1, 100, 80)).toBeLessThan(lineSpacingM(lr1, 100, 60))
+  })
+
+  it('widens the passes as the aircraft climbs', () => {
+    expect(lineSpacingM(lr1, 200, 70)).toBeGreaterThan(lineSpacingM(lr1, 100, 70))
+  })
+
+  it('never returns zero, which would generate an endless sweep', () => {
+    expect(lineSpacingM(lr1, 100, 100)).toBeGreaterThanOrEqual(1)
+    expect(lineSpacingM(lr1, 0, 90)).toBeGreaterThanOrEqual(1)
+  })
+
+  it('falls back to a full frame for nonsense overlap', () => {
+    expect(lineSpacingM(lr1, 100, -20)).toBeCloseTo(footprintWidthM(lr1, 100), 4)
   })
 })

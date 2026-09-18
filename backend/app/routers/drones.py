@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
+from app.bookings import bookings_by_drone, holder_of
 from app.deps import CurrentUser, get_current_user, require_admin
 from app.drone_access import get_owned_drone, get_visible_drone
 from app.models.drone import Drone, DroneStatus
@@ -12,15 +13,16 @@ from app.schemas.drone import DroneCreate, DroneOut, DroneUpdate
 router = APIRouter(prefix="/drones", tags=["drones"])
 
 
-def _out(drone: Drone) -> DroneOut:
-    return DroneOut(**drone.model_dump(exclude={"id"}), id=str(drone.id))
+def _out(drone: Drone, booked_on: str | None = None) -> DroneOut:
+    return DroneOut(**drone.model_dump(exclude={"id"}), id=str(drone.id), booked_on=booked_on)
 
 
 @router.get("", response_model=list[DroneOut])
 async def list_drones(current_user: CurrentUser = Depends(get_current_user)) -> list[DroneOut]:
     if current_user.role == Role.ADMIN:
         drones = await Drone.find(Drone.owner_id == current_user.user_id).to_list()
-        return [_out(d) for d in drones]
+        booked = await bookings_by_drone(current_user.user_id)
+        return [_out(d, booked.get(str(d.id))) for d in drones]
 
     # a pilot's fleet view is whatever they are booked to fly
     missions = await Mission.find(
@@ -45,7 +47,9 @@ async def create_drone(
 async def get_drone(
     drone_id: str, current_user: CurrentUser = Depends(get_current_user)
 ) -> DroneOut:
-    return _out(await get_visible_drone(drone_id, current_user))
+    drone = await get_visible_drone(drone_id, current_user)
+    holder = await holder_of(str(drone.id), drone.owner_id)
+    return _out(drone, str(holder.id) if holder else None)
 
 
 @router.patch("/{drone_id}", response_model=DroneOut)

@@ -74,3 +74,13 @@ export function footprintWidthM(payload: Payload, altitudeM: number): number {
   if (!payload.focal_length_mm) return 0
   return (altitudeM * payload.sensor_width_mm) / payload.focal_length_mm
 }
+
+// what the side overlap works out to as a distance between passes. this is the
+// number the sweep generators actually use, so the payload and altitude drive
+// the flight path rather than just being displayed next to it
+export function lineSpacingM(payload: Payload, altitudeM: number, overlapPercent: number): number {
+  const frame = footprintWidthM(payload, altitudeM)
+  const overlap = Number.isFinite(overlapPercent) ? Math.min(Math.max(overlapPercent, 0), 99) : 0
+  // never zero, a spacing of nothing would ask for an endless number of lines
+  return Math.max(1, frame * (1 - overlap / 100))
+}

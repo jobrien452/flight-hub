@@ -44,6 +44,7 @@ export const fixtureDrone: Drone = {
   owner_id: 'admin-1',
   flight_hours: 12.5,
   missions_flown: 8,
+  booked_on: null,
   created_at: '2026-01-01T00:00:00Z',
   updated_at: '2026-01-01T00:00:00Z',
 }
